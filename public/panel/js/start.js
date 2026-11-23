@@ -47,7 +47,7 @@
   function renderChrome() {
     const s = App.state;
     if (!s) return;
-    for (const el of [$('#brandName'), $('#topName')]) el.textContent = s.schoolName;
+    for (const el of [$('#brandName'), $('#topName')]) { el.textContent = s.schoolName; el.title = s.schoolName; }
     const logo = s.display && s.display.logo;
     for (const el of [$('#brandLogo'), $('#topLogo')]) {
       if (logo) { const src = mediaUrl(logo); if (el.getAttribute('src') !== src) el.src = src; }
