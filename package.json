@@ -1,0 +1,27 @@
+{
+  "name": "okul-zil",
+  "productName": "Okul Zil ve Pano",
+  "version": "0.1.0",
+  "description": "Okul zil sistemi, koridor panosu, törenler ve acil durum alarmları tek programda",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server/standalone.js",
+    "test": "node test/scheduler.test.js",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "tr.okul.zil",
+    "productName": "Okul Zil ve Pano",
+    "files": ["main.js", "server/**", "public/**", "sounds/**", "package.json"],
+    "win": { "target": "nsis" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  }
+}

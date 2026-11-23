@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Koridor Panosu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="pano.css">
+</head>
+<body>
+<div id="stage">
+
+  <!-- NORMAL PANO -->
+  <section id="scr-normal" class="screen active">
+    <header class="top">
+      <div class="brand"><div class="logo">LOGO</div><div id="schoolName" class="school"></div></div>
+      <div id="dateText" class="date"></div>
+    </header>
+    <div class="grid2">
+      <div class="col">
+        <div class="card clock-card">
+          <div id="clock" class="clock">--:--</div>
+          <div id="period" class="sub"></div>
+        </div>
+        <div id="countCard" class="count-card">
+          <div><div id="countTitle" class="count-title"></div><div id="countSub" class="count-sub"></div></div>
+          <div id="countValue" class="count-value"></div>
+        </div>
+        <div class="chips">
+          <div class="chip">Bugünkü program: <b id="progName"></b></div>
+          <div class="chip">Son ders bitişi: <b id="lastEnd"></b></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="label">DUYURULAR</div>
+          <div id="annMain" class="ann-main"></div>
+          <div id="annNext" class="ann-next"></div>
+        </div>
+        <div class="grid2 inner">
+          <div class="card"><div class="label">NÖBETÇİLER</div><div id="duty" class="list"></div></div>
+          <div class="card"><div class="label">GÜNÜN MENÜSÜ</div><div id="menu" class="list"></div></div>
+        </div>
+      </div>
+    </div>
+    <footer class="ticker"><div class="ticker-tag">DUYURU</div><div class="ticker-track"><span id="ticker"></span></div></footer>
+  </section>
+
+  <!-- İSTİKLAL MARŞI -->
+  <section id="scr-anthem" class="screen anthem">
+    <svg class="flag" viewBox="0 0 360 360" aria-hidden="true">
+      <circle cx="150" cy="180" r="120" fill="#fff"/>
+      <circle cx="180" cy="180" r="96" fill="#C8102E"/>
+      <polygon fill="#fff" points="300,180 259.4,193.2 259.4,235.9 234.3,201.4 193.7,214.6 218.8,180 193.7,145.4 234.3,158.6 259.4,124.1 259.4,166.8"/>
+    </svg>
+    <div class="anthem-text">
+      <div class="kicker">LÜTFEN AYAĞA KALKINIZ</div>
+      <h1>İstiklal Marşı</h1>
+      <div id="stanza" class="stanza"></div>
+      <div class="poet">Mehmet Âkif Ersoy</div>
+      <div class="bar"><div id="anthemBar"></div></div>
+      <div class="bar-meta"><span id="anthemSource"></span><span id="anthemTime"></span></div>
+    </div>
+  </section>
+
+  <!-- SAYGI DURUŞU -->
+  <section id="scr-saygi" class="screen saygi">
+    <div class="portrait">
+      <img id="portraitImg" src="/sounds/ataturk.jpg" alt="Mustafa Kemal Atatürk" onerror="this.style.display='none'">
+    </div>
+    <div class="saygi-text">
+      <div id="saygiKicker" class="kicker"></div>
+      <h1>Saygı Duruşu</h1>
+      <p id="saygiLine">Ulu Önder Mustafa Kemal Atatürk'ü ve aziz şehitlerimizi saygı, minnet ve özlemle anıyoruz.</p>
+      <div id="saygiSteps" class="steps"></div>
+    </div>
+  </section>
+
+  <!-- ACİL DURUM -->
+  <section id="scr-alarm" class="screen alarm">
+    <div class="alarm-head">
+      <div id="alarmTitle" class="alarm-title"></div>
+      <div class="alarm-meta"><div id="alarmMode"></div><div id="alarmTime"></div></div>
+    </div>
+    <div id="alarmBody" class="alarm-body"></div>
+    <div class="alarm-foot"><div id="alarmFoot"></div><div id="alarmArea" class="area"></div></div>
+  </section>
+
+  <!-- ANONS / ZİL BİLDİRİMİ -->
+  <div id="overlay" class="overlay"><div id="overlayText"></div></div>
+</div>
+
+<div id="audioGate" class="audio-gate">Sesi açmak için bir kez tıklayın</div>
+<script src="pano.js"></script>
+</body>
+</html>

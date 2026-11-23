@@ -1,0 +1,123 @@
+{
+  "schoolName": "[OKUL ADI]",
+  "pin": "1234",
+  "activeProgram": "normal",
+  "override": null,
+  "weekdays": [1, 2, 3, 4, 5],
+  "breakMusic": true,
+  "programs": {
+    "normal": {
+      "name": "Normal gün",
+      "teacherBellOffset": 2,
+      "silent": false,
+      "lessons": [
+        { "start": "08:10", "end": "08:50" },
+        { "start": "09:00", "end": "09:40" },
+        { "start": "09:50", "end": "10:30" },
+        { "start": "10:40", "end": "11:20" },
+        { "start": "11:30", "end": "12:10" },
+        { "start": "12:50", "end": "13:30" },
+        { "start": "13:40", "end": "14:20" },
+        { "start": "14:30", "end": "15:10" }
+      ]
+    },
+    "kisa": {
+      "name": "Kısaltılmış gün",
+      "teacherBellOffset": 2,
+      "silent": false,
+      "lessons": [
+        { "start": "08:10", "end": "08:40" },
+        { "start": "08:50", "end": "09:20" },
+        { "start": "09:30", "end": "10:00" },
+        { "start": "10:10", "end": "10:40" },
+        { "start": "10:50", "end": "11:20" },
+        { "start": "11:50", "end": "12:20" },
+        { "start": "12:30", "end": "13:00" },
+        { "start": "13:10", "end": "13:40" }
+      ]
+    },
+    "sinav": {
+      "name": "Sınav günü",
+      "teacherBellOffset": 0,
+      "silent": true,
+      "lessons": [
+        { "start": "08:10", "end": "08:50" },
+        { "start": "09:00", "end": "09:40" },
+        { "start": "09:50", "end": "10:30" },
+        { "start": "10:40", "end": "11:20" },
+        { "start": "11:30", "end": "12:10" },
+        { "start": "12:50", "end": "13:30" },
+        { "start": "13:40", "end": "14:20" },
+        { "start": "14:30", "end": "15:10" }
+      ]
+    }
+  },
+  "holidays": [
+    { "date": "01-01", "name": "Yılbaşı" },
+    { "date": "04-23", "name": "Ulusal Egemenlik ve Çocuk Bayramı" },
+    { "date": "05-01", "name": "Emek ve Dayanışma Günü" },
+    { "date": "05-19", "name": "Atatürk'ü Anma, Gençlik ve Spor Bayramı" },
+    { "date": "07-15", "name": "Demokrasi ve Millî Birlik Günü" },
+    { "date": "08-30", "name": "Zafer Bayramı" },
+    { "date": "10-29", "name": "Cumhuriyet Bayramı" }
+  ],
+  "breaks": [],
+  "sounds": {
+    "teacher": "zil-ogretmen.mp3",
+    "student": "zil-ogrenci.mp3",
+    "end": "zil-cikis.mp3",
+    "anthem": "istiklal-marsi.mp3",
+    "siren": "siren.mp3",
+    "chime": "anons.mp3",
+    "deprem": "deprem.mp3",
+    "yangin": "yangin.mp3",
+    "tahliye": "tahliye.mp3",
+    "kilit": "sinifta-kal.mp3"
+  },
+  "ceremonies": [
+    {
+      "id": "pzt",
+      "name": "Pazartesi bayrak töreni",
+      "mode": "auto",
+      "rule": { "type": "weekly", "day": 1, "time": "08:00" },
+      "steps": [{ "type": "anthem" }]
+    },
+    {
+      "id": "cuma",
+      "name": "Cuma bayrak indirme",
+      "mode": "auto",
+      "rule": { "type": "weekly", "day": 5, "time": "afterLast" },
+      "steps": [{ "type": "anthem" }]
+    },
+    {
+      "id": "kasim",
+      "name": "10 Kasım anma",
+      "mode": "auto",
+      "rule": { "type": "yearly", "dates": ["11-10"], "time": "09:05", "onlySchoolDays": false },
+      "steps": [{ "type": "siren", "seconds": 120 }, { "type": "anthem" }]
+    },
+    {
+      "id": "anma",
+      "name": "18 Mart · 15 Temmuz anma",
+      "mode": "manual",
+      "rule": { "type": "yearly", "dates": ["03-18", "07-15"], "time": "08:30" },
+      "steps": [{ "type": "silence", "seconds": 60 }, { "type": "anthem" }]
+    },
+    {
+      "id": "saygi",
+      "name": "Saygı duruşu (genel)",
+      "mode": "manual",
+      "rule": null,
+      "steps": [{ "type": "siren", "seconds": 60 }, { "type": "anthem" }]
+    }
+  ],
+  "board": {
+    "announcements": ["Hoş geldiniz! Duyurular telefon panelinden eklenir."],
+    "duty": [],
+    "menu": [],
+    "ticker": ""
+  },
+  "emergency": {
+    "assemblyArea": "Bahçe"
+  }
+}
