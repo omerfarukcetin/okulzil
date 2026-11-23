@@ -1,16 +1,19 @@
 {
   "name": "okul-zil",
   "productName": "Okul Zil ve Pano",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Okul zil sistemi, koridor panosu, törenler ve acil durum alarmları tek programda",
   "main": "main.js",
+  "author": "Ömer Faruk Çetin",
+  "license": "MIT",
   "scripts": {
     "start": "electron .",
     "server": "node server/standalone.js",
     "test": "node test/scheduler.test.js",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win --publish never"
   },
   "dependencies": {
+    "adm-zip": "^0.5.18",
     "express": "^4.21.2"
   },
   "devDependencies": {
@@ -20,8 +23,36 @@
   "build": {
     "appId": "tr.okul.zil",
     "productName": "Okul Zil ve Pano",
-    "files": ["main.js", "server/**", "public/**", "sounds/**", "package.json"],
-    "win": { "target": "nsis" },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "server/**",
+      "public/**",
+      "sounds/**",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "OkulZil-Kurulum-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Okul Zil ve Pano",
+      "runAfterFinish": true
+    }
   }
 }

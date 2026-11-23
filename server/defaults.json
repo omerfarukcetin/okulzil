@@ -325,7 +325,8 @@
     ],
     "duty": [],
     "menu": [],
-    "ticker": ""
+    "ticker": "",
+    "countdowns": []
   },
   "emergency": {
     "assemblyArea": "Bahçe"
@@ -361,8 +362,18 @@
       "showProgress": true,
       "visual": "flag",
       "video": null
-    }
+    },
+    "showWeather": true,
+    "showCountdown": true
   },
   "media": [],
-  "setupDone": false
+  "setupDone": false,
+  "dayPrograms": {},
+  "rangePrograms": [],
+  "weather": {
+    "enabled": false,
+    "city": "",
+    "lat": null,
+    "lon": null
+  }
 }

@@ -77,4 +77,23 @@ test('Kapalı tören otomatik çalmaz', () => {
   assert.ok(!d.events.some((e) => e.id === 'pzt'));
 });
 
+test('Güne göre program: Cuma kısaltılmış', () => {
+  const c = structuredClone(cfg);
+  c.dayPrograms = { 5: 'kisa' };
+  assert.strictEqual(buildDay(c, new Date(2026, 10, 27)).programId, 'kisa'); // Cuma
+  assert.strictEqual(buildDay(c, new Date(2026, 10, 26)).programId, 'normal'); // Perşembe
+});
+
+test('Tarih aralığı programı güne göre programdan önce gelir, bugüne seçim hepsinden önce', () => {
+  const c = structuredClone(cfg);
+  c.dayPrograms = { 5: 'kisa' };
+  c.rangePrograms = [{ from: '2026-11-23', to: '2026-11-27', program: 'sinav', name: 'Sınav haftası' }];
+  const d = buildDay(c, new Date(2026, 10, 27));
+  assert.strictEqual(d.programId, 'sinav');
+  assert.strictEqual(d.programSource, 'range');
+  c.override = { date: '2026-11-27', program: 'normal' };
+  assert.strictEqual(buildDay(c, new Date(2026, 10, 27)).programId, 'normal');
+  assert.strictEqual(buildDay(c, new Date(2026, 10, 30)).programId, 'normal'); // aralık dışı Pazartesi
+});
+
 console.log('\n' + passed + ' test geçti');

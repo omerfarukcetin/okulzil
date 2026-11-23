@@ -1,0 +1,37 @@
+# Windows kurulum dosyasını (.exe) GitHub sunucularında derler.
+# - Her "v" ile başlayan sürüm etiketinde (ör. v0.2.0) derlenir ve Releases sayfasına konur.
+# - Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
+name: Windows kurulum dosyası
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OkulZil-Kurulum
+          path: dist/*.exe
+      - name: Sürüme ekle
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          body: |
+            **Kurulum:** `OkulZil-Kurulum-*.exe` dosyasını indirip çalıştırın.
+            Windows "Bilinmeyen yayımcı" uyarısı verirse **Ek bilgi → Yine de çalıştır** deyin.

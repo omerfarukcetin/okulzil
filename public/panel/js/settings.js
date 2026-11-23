@@ -33,6 +33,7 @@
           const r = await save(api('PUT', '/settings', { schoolName: name.value.trim(), emergency: { assemblyArea: area.value.trim() } }));
           if (r.ok) App.reloadConfig(false);
         } }, icon('check', 'sm'), 'Kaydet'))),
+      weatherCard(),
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Panel PIN\'i' }), h('p', { text: 'Okul ağındaki herkes panelin adresine ulaşabilir; PIN\'i kimseyle paylaşmayın.' }))),
         h('div', { class: 'grid two', style: { gap: '12px' } }, field('Yeni PIN', p1), field('Yeni PIN (tekrar)', p2)),
         h('div', { class: 'row end', style: { marginTop: '14px' } }, h('button', { class: 'btn primary', type: 'button', onclick: async () => {
@@ -41,6 +42,39 @@
           const r = await save(api('PUT', '/settings', { newPin: p1.value }), 'PIN değişti');
           if (r.ok) { App.pin = p1.value; try { localStorage.setItem('zilPin', App.pin); } catch (e) {} p1.value = p2.value = ''; }
         } }, icon('lock', 'sm'), 'PIN\'i değiştir')))));
+  }
+
+  function weatherCard() {
+    const w = { enabled: false, city: '', ...(App.config.weather || {}) };
+    const q = h('input', { placeholder: 'Şehir ya da ilçe adı (örn. Beylikdüzü)', value: '' });
+    const results = h('div', { class: 'list-rows', style: { marginTop: '8px' } });
+    const current = h('div', { class: 'small muted', style: { marginTop: '8px' } });
+    const drawCurrent = () => {
+      const live = App.state && App.state.weather;
+      current.textContent = w.city ? 'Seçili: ' + w.city + (live ? ' · şu an ' + live.temp + '°' : w.enabled ? ' · bilgi bekleniyor (internet gerekir)' : '') : 'Henüz şehir seçilmedi.';
+    };
+    drawCurrent();
+    const search = async () => {
+      const text = q.value.trim();
+      if (text.length < 2) return;
+      results.replaceChildren(h('div', { class: 'small muted', text: 'Aranıyor…' }));
+      const r = await api('GET', '/weather/search?q=' + encodeURIComponent(text));
+      results.innerHTML = '';
+      if (!r.ok) return results.append(h('div', { class: 'small', style: { color: 'var(--bad)' }, text: r.error }));
+      if (!r.results.length) return results.append(h('div', { class: 'small muted', text: 'Sonuç bulunamadı.' }));
+      for (const x of r.results) results.append(h('button', { class: 'btn sm', style: { justifyContent: 'flex-start' }, type: 'button', onclick: async () => {
+        w.city = x.name; w.enabled = true;
+        await save(api('PUT', '/weather', { city: x.name, lat: x.lat, lon: x.lon, enabled: true }), 'Hava durumu: ' + x.name);
+        App.config.weather = { ...w, lat: x.lat, lon: x.lon };
+        results.innerHTML = ''; q.value = ''; drawCurrent(); App.render();
+      } }, icon('check', 'sm'), x.name + (x.region ? ' · ' + x.region : '')));
+    };
+    q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+    return h('div', { class: 'card' },
+      h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Hava durumu' }), h('p', { text: 'TV\'nin sağ üstünde görünür. Okul bilgisayarında internet olması gerekir.' }))),
+      toggle('Hava durumunu göster', w.enabled, async (v) => { w.enabled = v; await save(api('PUT', '/weather', { enabled: v })); }),
+      h('div', { class: 'row', style: { marginTop: '8px', flexWrap: 'nowrap' } }, h('div', { class: 'grow' }, q), h('button', { class: 'btn', type: 'button', onclick: search }, 'Ara')),
+      results, current);
   }
 
   // ================= GÖRÜNÜM =================
@@ -109,7 +143,9 @@
       h('div', { class: 'divider' }),
       toggle('Nöbetçileri göster', d.showDuty !== false, (v) => putDisplay({ showDuty: v })),
       toggle('Yemek menüsünü göster', d.showMenu !== false, (v) => putDisplay({ showMenu: v })),
-      toggle('Medyayı sadece teneffüste göster', d.mediaOnlyBreaks, (v) => putDisplay({ mediaOnlyBreaks: v }), 'Ders sırasında Klasik düzen'));
+      toggle('Medyayı sadece teneffüste göster', d.mediaOnlyBreaks, (v) => putDisplay({ mediaOnlyBreaks: v }), 'Ders sırasında Klasik düzen'),
+      toggle('Hava durumunu göster', d.showWeather !== false, (v) => putDisplay({ showWeather: v }), 'Şehir: Ayarlar › Genel'),
+      toggle('Geri sayımları göster', d.showCountdown !== false, (v) => putDisplay({ showCountdown: v }), 'Geri sayımlar: Duyurular sayfası'));
 
     // Teneffüs görünümü
     const st = { ...STATUS_DEF, ...(d.status || {}) };
@@ -333,6 +369,10 @@
           h('div', { class: 'small muted', style: { marginTop: '10px' }, text: 'Program sürümü: ' + (info.build || '?') })),
         h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'TV\'de ses testi' }), h('p', { text: 'Sesi sistem odasındaki hoparlörlerden çalar' }))),
           h('div', { class: 'row' }, tests.map(([k, n]) => h('button', { class: 'btn sm', type: 'button', onclick: () => save(api('POST', '/test-sound', { sound: k }), n + ' çalınıyor') }, icon('volume', 'sm'), n)))),
+        h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Yedekleme' }), h('p', { text: 'Ayarlar, sesler, logo ve medya tek dosyada. Bilgisayar değişirse yeni bilgisayarda geri yükleyin.' }))),
+          h('div', { class: 'row' },
+            h('button', { class: 'btn primary', type: 'button', onclick: downloadBackup }, icon('down', 'sm'), 'Yedeği indir'),
+            h('button', { class: 'btn', type: 'button', onclick: restoreBackup }, icon('upload', 'sm'), 'Yedekten geri yükle'))),
         h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h2', { text: 'Kurulum' })),
           h('div', { class: 'row' },
             h('button', { class: 'btn', type: 'button', onclick: () => App.wizard() }, icon('wand', 'sm'), 'Kurulum sihirbazını aç'),
@@ -342,6 +382,31 @@
           const [t, ...rest] = l.split(' · ');
           return h('div', { class: 'tl-item small' }, h('span', { class: 'muted', style: { width: '128px', flexShrink: 0 }, text: t }), h('span', { class: 'l', text: rest.join(' · ') }));
         })))));
+  }
+
+  async function downloadBackup(e) {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/backup', { headers: { 'x-pin': App.pin } });
+      if (!r.ok) throw new Error();
+      const blob = await r.blob();
+      const name = (r.headers.get('Content-Disposition') || '').match(/filename="(.+)"/);
+      const a = h('a', { href: URL.createObjectURL(blob), download: name ? name[1] : 'okulzil-yedek.zip' });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast('Yedek indirildi');
+    } catch (err) { toast('Yedek alınamadı', true); }
+    btn.disabled = false;
+  }
+  async function restoreBackup() {
+    const [f] = await pickFile('.zip,application/zip');
+    if (!f) return;
+    const ok = await confirmBox({ title: 'Yedek geri yüklensin mi?', text: 'Şu anki ayarların yerine yedekteki ayarlar, sesler ve medya gelir. PIN değişmez. Şu anki ayarlar ayrıca saklanır.', ok: 'Geri yükle', danger: true });
+    if (!ok) return;
+    toast('Geri yükleniyor…');
+    const r = await save(upload('/backup/restore', f), 'Yedek geri yüklendi');
+    if (r.ok) await App.reloadConfig();
   }
 
   App.pages.set = { render, leave: () => { if (player) { player.pause(); player = null; } } };

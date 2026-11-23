@@ -18,15 +18,25 @@ function schoolDayInfo(cfg, d) {
   return { ok: true, reason: null };
 }
 
+// Hangi program çalacak? Öncelik: bugüne elle seçilen > tarih aralığı > haftanın günü > varsayılan
 function programIdFor(cfg, d) {
+  return programSource(cfg, d).id;
+}
+function programSource(cfg, d) {
+  const dk = dateKey(d);
   const o = cfg.override;
-  if (o && o.date === dateKey(d) && cfg.programs[o.program]) return o.program;
-  return cfg.activeProgram;
+  if (o && o.date === dk && cfg.programs[o.program]) return { id: o.program, source: 'today' };
+  const r = (cfg.rangePrograms || []).find((x) => dk >= x.from && dk <= x.to && cfg.programs[x.program]);
+  if (r) return { id: r.program, source: 'range', label: r.name };
+  const w = (cfg.dayPrograms || {})[d.getDay()];
+  if (w && cfg.programs[w]) return { id: w, source: 'weekday' };
+  return { id: cfg.activeProgram, source: 'default' };
 }
 
 function buildDay(cfg, d) {
   const sd = schoolDayInfo(cfg, d);
-  const pid = programIdFor(cfg, d);
+  const src = programSource(cfg, d);
+  const pid = src.id;
   const prog = cfg.programs[pid];
   const lessons = sd.ok && prog ? [...prog.lessons].sort((a, b) => a.start.localeCompare(b.start)) : [];
   const events = [];
@@ -79,6 +89,8 @@ function buildDay(cfg, d) {
     reason: sd.reason,
     programId: pid,
     programName: prog ? prog.name : pid,
+    programSource: src.source,
+    programSourceLabel: src.label || null,
     silent: !!(prog && prog.silent),
     lessons,
     events
@@ -120,4 +132,4 @@ function createScheduler({ getConfig, onEvent, now = () => new Date() }) {
   };
 }
 
-module.exports = { buildDay, createScheduler, toMin, fromMin, dateKey };
+module.exports = { buildDay, createScheduler, toMin, fromMin, dateKey, programSource };

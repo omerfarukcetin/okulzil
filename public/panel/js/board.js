@@ -10,7 +10,8 @@
         announcements: b.announcements.map((x) => x.trim()).filter(Boolean),
         duty: b.duty.filter((x) => x.place.trim() || x.name.trim()).map((x) => ({ place: x.place.trim() || '—', name: x.name.trim() })),
         menu: b.menu.map((x) => x.trim()).filter(Boolean),
-        ticker: (b.ticker || '').trim()
+        ticker: (b.ticker || '').trim(),
+        countdowns: b.countdowns.filter((x) => x.date).map((x) => ({ title: x.title.trim() || 'Etkinlik', date: x.date }))
       }), 'TV\'de yayında');
     }, 700);
   }
@@ -22,9 +23,9 @@
       box.innerHTML = '';
       if (!list.length) box.append(h('div', { class: 'muted small', text: empty }));
       list.forEach((item, i) => {
-        const inputs = cols.map(([key, ph, w]) => {
-          const inp = h('input', { value: key ? item[key] : item, placeholder: ph, 'aria-label': ph, style: w ? { maxWidth: w } : null });
-          inp.oninput = () => { if (key) item[key] = inp.value; else list[i] = inp.value; saveBoard(); };
+        const inputs = cols.map(([key, ph, w, type]) => {
+          const inp = h('input', { type: type || 'text', value: key ? item[key] : item, placeholder: ph, 'aria-label': ph, style: w ? { maxWidth: w } : null });
+          inp.addEventListener(type === 'date' ? 'change' : 'input', () => { if (key) item[key] = inp.value; else list[i] = inp.value; saveBoard(); });
           return inp;
         });
         box.append(h('div', { class: 'list-row' }, h('span', { class: 'num', text: i + 1 }), inputs,
@@ -41,6 +42,7 @@
     b.announcements = b.announcements || [];
     b.duty = b.duty || [];
     b.menu = b.menu || [];
+    b.countdowns = b.countdowns || [];
 
     root.append(h('div', { class: 'page-head' }, h('div', {}, h('h1', { text: 'Duyurular' }), h('p', { text: 'Yazdıklarınız birkaç saniye içinde TV\'lerde görünür.' }))));
 
@@ -51,6 +53,8 @@
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Duyurular' }), h('p', { text: 'TV\'de sırayla 10 saniyede bir değişir' }))),
         rowsEditor({ list: b.announcements, make: () => '', empty: 'Henüz duyuru yok.', addLabel: 'Duyuru ekle', cols: [[null, 'Duyuru metni']] })),
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h2', { text: 'Kayan yazı' })), ticker),
+      h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Geri sayımlar' }), h('p', { text: 'TV\'de en yakın iki tanesi görünür: "LGS · 187 gün"' }))),
+        rowsEditor({ list: b.countdowns, make: () => ({ title: '', date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10) }), empty: 'Henüz geri sayım yok.', addLabel: 'Geri sayım ekle', cols: [['title', 'Etkinlik (örn. LGS)'], ['date', 'Tarih', '170px', 'date']] })),
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h2', { text: 'Nöbetçi öğretmenler' })),
         rowsEditor({ list: b.duty, make: () => ({ place: '', name: '' }), empty: 'Henüz nöbetçi yok.', addLabel: 'Nöbetçi ekle', cols: [['place', 'Yer (örn. Zemin kat)', '160px'], ['name', 'Öğretmen']] })),
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h2', { text: 'Günün menüsü' })),

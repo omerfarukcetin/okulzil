@@ -10,7 +10,18 @@ Zil sistemi, koridor TV panosu, İstiklal Marşı / saygı duruşu törenleri ve
 - **Sistem odasında acil kullanım:** `Ctrl+Shift+P` küçük paneli açar (3 dk işlem yapılmazsa kapanır). Ekran TV'lere yansıdığı için kısa tutun.
 - **Programı kapatmak:** `Ctrl+Shift+Alt+Q`.
 
-## Kurulum (Windows, geliştirme)
+## Kurulum (Windows, önerilen)
+
+1. GitHub'da **Releases** sayfasından en son `OkulZil-Kurulum-x.y.z.exe` dosyasını indirin.
+2. Çalıştırın. Windows "Bilinmeyen yayımcı" uyarısı verirse **Ek bilgi → Yine de çalıştır** deyin.
+3. Kurulum bitince program açılır, pano TV'lere tam ekran gelir ve Windows her açıldığında kendiliğinden başlar.
+4. Telefondan paneli açın (adres: Ayarlar › Sistem). İlk girişte kurulum sihirbazı açılır.
+
+Ayarlar `%APPDATA%\Okul Zil ve Pano\` klasöründe saklanır. Güncelleme için yeni kurulum dosyasını aynı şekilde çalıştırmanız yeterli; ayarlar korunur.
+
+**Yeni kurulum dosyası üretmek (geliştirici):** sürüm numarasını `package.json`'da artırıp `git tag v0.2.1 && git push --tags` yapın. GitHub Actions `.exe` dosyasını derleyip Releases'a ekler. Actions sekmesinden "Run workflow" ile de derlenebilir.
+
+## Kurulum (geliştirme)
 
 1. [Node.js LTS](https://nodejs.org) kurun.
 2. Bu klasörde komut satırı açın:
@@ -115,6 +126,19 @@ Medya dosyaları ayar klasöründeki `media/` klasöründe saklanır.
 
 Panelin kendi teması sağ üstteki düğmeyle değişir: Otomatik (cihaza göre) → Açık → Koyu.
 
+## Otomatik program seçimi
+
+**Zil** sayfasında: haftanın her günü için ayrı program (örn. Cuma → Cuma programı) ve tarih aralıkları (örn. 12–16 Ocak → Sınav günü). Öncelik: bugüne elle seçim › tarih aralığı › haftanın günü › varsayılan program.
+
+## Hava durumu ve geri sayım
+
+- **Hava durumu:** Ayarlar › Genel'den şehir aranıp seçilir; TV'nin sağ üstünde sıcaklık ve gün içi en yüksek/en düşük görünür. Open-Meteo kullanılır (ücretsiz, anahtar gerekmez). Okul bilgisayarında internet yoksa görünmez, zil etkilenmez.
+- **Geri sayım:** Duyurular sayfasından eklenir (örn. "LGS · 187 gün"). En yakın ikisi TV'de görünür; tarihi geçenler kendiliğinden kalkar.
+
+## Yedekleme
+
+Ayarlar › Sistem › **Yedeği indir**: ayarlar, sesler, logo ve medya tek ZIP dosyası. Yeni bilgisayarda **Yedekten geri yükle** ile her şey geri gelir (PIN değişmez, önceki ayarlar ayrıca saklanır).
+
 ## Öncelik sırası
 
 Acil durum alarmı > Tören > Zil. Alarm çalarken zil ve tören çalmaz; tören sürerken zil atlanır.
@@ -122,4 +146,4 @@ Her şey `kayit.log` dosyasına yazılır.
 
 ## Ayar dosyası
 
-Tüm ayarlar `config.json` içinde (Electron'da `%APPDATA%/okul-zil/`). Yedeklemek için bu dosyayı kopyalamanız yeterli.
+Tüm ayarlar `config.json` içinde (kurulumda `%APPDATA%\Okul Zil ve Pano\`). Yedeklemek için bu dosyayı kopyalamanız yeterli.

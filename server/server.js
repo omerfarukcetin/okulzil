@@ -59,6 +59,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     console.log(line);
   }
 
+  let weather = null; // son hava durumu
   const state = { mode: 'normal', alarm: null, ceremony: null, skipNext: null, music: false };
   let ceremonyTimer = null;
 
@@ -97,6 +98,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       board: c.board,
       emergency: c.emergency,
       display: c.display,
+      weather: weather && (c.weather || {}).enabled ? weather : null,
       ceremonies: c.ceremonies.map((x) => ({ id: x.id, name: x.name, mode: x.mode, steps: x.steps, screen: x.screen })),
       media: c.media.filter((m) => m.enabled !== false),
       sounds: c.sounds,
@@ -369,9 +371,33 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     const today = new Date();
     const dk = require('./scheduler').dateKey(today);
     store.update((c) => {
-      c.override = id === c.activeProgram ? null : { date: dk, program: id };
+      // Zaten kurala göre çalacak program seçildiyse elle seçimi kaldır
+      const base = require('./scheduler').programSource({ ...c, override: null }, today).id;
+      c.override = id === base ? null : { date: dk, program: id };
     });
     log('Bugünkü program: ' + cfg().programs[id].name);
+    pushState();
+    res.json({ ok: true });
+  });
+
+  // Haftanın günü ve tarih aralığı kuralları
+  api.put('/program-rules', (req, res) => {
+    const b = req.body || {};
+    const dateOk = (x) => /^\d{4}-\d{2}-\d{2}$/.test(x || '');
+    store.update((c) => {
+      if (b.dayPrograms && typeof b.dayPrograms === 'object') {
+        const dp = {};
+        for (const [k, v] of Object.entries(b.dayPrograms)) if (/^[0-6]$/.test(k) && c.programs[v]) dp[k] = v;
+        c.dayPrograms = dp;
+      }
+      if (Array.isArray(b.rangePrograms)) {
+        c.rangePrograms = b.rangePrograms
+          .filter((r) => dateOk(r.from) && dateOk(r.to) && c.programs[r.program])
+          .map((r) => ({ from: r.from <= r.to ? r.from : r.to, to: r.from <= r.to ? r.to : r.from, program: r.program, name: String(r.name || '').trim().slice(0, 60) || c.programs[r.program].name }))
+          .slice(0, 50);
+      }
+    });
+    log('Program kuralları güncellendi');
     pushState();
     res.json({ ok: true });
   });
@@ -385,8 +411,13 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       }
     }
     store.update((c) => {
-      if (programs) c.programs = programs;
+      if (programs && Object.keys(programs).length) c.programs = programs;
       if (activeProgram && c.programs[activeProgram]) c.activeProgram = activeProgram;
+      if (!c.programs[c.activeProgram]) c.activeProgram = Object.keys(c.programs)[0];
+      // Silinen programa bağlı kuralları temizle
+      for (const k of Object.keys(c.dayPrograms || {})) if (!c.programs[c.dayPrograms[k]]) delete c.dayPrograms[k];
+      c.rangePrograms = (c.rangePrograms || []).filter((r) => c.programs[r.program]);
+      if (c.override && !c.programs[c.override.program]) c.override = null;
     });
     log('Zil programları güncellendi');
     pushState();
@@ -458,7 +489,10 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
         announcements: (b.announcements || []).map(String).filter(Boolean).slice(0, 20),
         duty: (b.duty || []).filter((d) => d && d.place).slice(0, 12),
         menu: (b.menu || []).map(String).filter(Boolean).slice(0, 8),
-        ticker: String(b.ticker || '').slice(0, 300)
+        ticker: String(b.ticker || '').slice(0, 300),
+        countdowns: Array.isArray(b.countdowns)
+          ? b.countdowns.filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date || '')).map((x) => ({ title: String(x.title || '').trim().slice(0, 60) || 'Etkinlik', date: x.date })).slice(0, 20)
+          : (c.board.countdowns || [])
       };
     });
     pushState();
@@ -490,7 +524,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       if (['dark', 'light', 'ocean', 'forest', 'flag', 'sand', 'contrast'].includes(b.theme)) d.theme = b.theme;
       if (['classic', 'media', 'fullmedia'].includes(b.layout)) d.layout = b.layout;
       if (typeof b.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(b.accent)) d.accent = b.accent;
-      for (const k of ['showDuty', 'showMenu', 'mediaOnlyBreaks']) if (typeof b[k] === 'boolean') d[k] = b[k];
+      for (const k of ['showDuty', 'showMenu', 'mediaOnlyBreaks', 'showWeather', 'showCountdown']) if (typeof b[k] === 'boolean') d[k] = b[k];
       if (['normal', 'big'].includes(b.logoSize)) d.logoSize = b.logoSize;
       if (typeof b.logoBg === 'boolean') d.logoBg = b.logoBg;
       if (b.anthemScreen && typeof b.anthemScreen === 'object') {
@@ -612,6 +646,108 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     });
     pushState();
     res.json({ ok: true });
+  });
+
+  // --- Hava durumu (Open-Meteo, anahtar gerektirmez; internet yoksa sessizce atlanır) ---
+  let weatherTimer = null;
+  async function refreshWeather() {
+    clearTimeout(weatherTimer);
+    const w = cfg().weather || {};
+    if (!w.enabled || w.lat == null || w.lon == null) { weather = null; pushState(); return; }
+    try {
+      const url = (process.env.ZIL_WEATHER_BASE || 'https://api.open-meteo.com') + '/v1/forecast?latitude=' + w.lat + '&longitude=' + w.lon +
+        '&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1';
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const j = await r.json();
+      weather = {
+        city: w.city, temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, isDay: !!j.current.is_day,
+        max: Math.round(j.daily.temperature_2m_max[0]), min: Math.round(j.daily.temperature_2m_min[0]), at: Date.now()
+      };
+      pushState();
+    } catch (e) {
+      // İnternet yoksa eski bilgiyi 3 saate kadar göster
+      if (weather && Date.now() - weather.at > 3 * 3600 * 1000) { weather = null; pushState(); }
+    }
+    weatherTimer = setTimeout(refreshWeather, 30 * 60 * 1000);
+  }
+  setTimeout(refreshWeather, 2000);
+
+  api.get('/weather/search', async (req, res) => {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return res.json({ ok: true, results: [] });
+    try {
+      const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&language=tr&format=json&name=' + encodeURIComponent(q), { signal: AbortSignal.timeout(10000) });
+      const j = await r.json();
+      res.json({ ok: true, results: (j.results || []).map((x) => ({ name: x.name, region: [x.admin1, x.country].filter(Boolean).join(', '), lat: x.latitude, lon: x.longitude })) });
+    } catch (e) {
+      res.json({ ok: false, error: 'Şehir aranamadı. Okul bilgisayarında internet var mı?' });
+    }
+  });
+  api.put('/weather', (req, res) => {
+    const b = req.body || {};
+    store.update((c) => {
+      const w = c.weather || {};
+      if (typeof b.enabled === 'boolean') w.enabled = b.enabled;
+      if (typeof b.city === 'string') w.city = b.city.slice(0, 80);
+      if (Number.isFinite(b.lat) && Number.isFinite(b.lon)) { w.lat = b.lat; w.lon = b.lon; }
+      c.weather = w;
+    });
+    refreshWeather();
+    res.json({ ok: true });
+  });
+
+  // --- Yedekleme ---
+  // Ayarlar, sesler ve medya tek ZIP dosyasında
+  api.get('/backup', (req, res) => {
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip();
+    zip.addLocalFile(store.file, '', 'config.json');
+    if (fs.existsSync(soundsDir)) zip.addLocalFolder(soundsDir, 'sounds');
+    if (fs.existsSync(mediaDir)) zip.addLocalFolder(mediaDir, 'media');
+    zip.addFile('okulzil-yedek.txt', Buffer.from('Okul Zil ve Pano yedeği\nOluşturma: ' + new Date().toISOString() + '\nSürüm: ' + BUILD + '\n'));
+    const day = new Date().toISOString().slice(0, 10);
+    res.set({ 'Content-Type': 'application/zip', 'Content-Disposition': 'attachment; filename="okulzil-yedek-' + day + '.zip"' });
+    res.send(zip.toBuffer());
+    log('Yedek indirildi');
+  });
+
+  api.post('/backup/restore', (req, res) => {
+    const AdmZip = require('adm-zip');
+    const tmp = path.join(dataDir, 'geri-yukle-' + Date.now() + '.zip');
+    const out = fs.createWriteStream(tmp);
+    req.pipe(out);
+    out.on('error', () => res.status(500).json({ ok: false, error: 'Dosya kaydedilemedi' }));
+    out.on('finish', () => {
+      try {
+        const zip = new AdmZip(tmp);
+        const cfgEntry = zip.getEntry('config.json');
+        if (!cfgEntry) throw new Error('Bu dosya bir Okul Zil yedeği değil (config.json yok)');
+        const restored = JSON.parse(cfgEntry.getData().toString('utf8'));
+        if (!restored.programs || !restored.ceremonies) throw new Error('Yedekteki ayar dosyası bozuk');
+        const currentPin = cfg().pin;
+        // Mevcut ayarları ayrıca sakla
+        fs.copyFileSync(store.file, store.file + '.geri-yukleme-oncesi-' + Date.now());
+        for (const e of zip.getEntries()) {
+          if (e.isDirectory) continue;
+          const name = e.entryName.replace(/\\/g, '/');
+          if (!/^(sounds|media)\//.test(name) || name.split('/').includes('..')) continue;
+          const dest = path.join(dataDir, ...name.split('/'));
+          if (!dest.startsWith(dataDir + path.sep)) continue;
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          fs.writeFileSync(dest, e.getData());
+        }
+        restored.pin = currentPin; // PIN değişmesin, kimse dışarıda kalmasın
+        fs.writeFileSync(store.file, JSON.stringify(restored, null, 2), 'utf8');
+        store.reload();
+        log('Yedek geri yüklendi');
+        pushState();
+        res.json({ ok: true });
+      } catch (err) {
+        res.status(400).json({ ok: false, error: err.message || 'Yedek okunamadı' });
+      } finally {
+        fs.unlink(tmp, () => {});
+      }
+    });
   });
 
   // --- İlk kurulum ---

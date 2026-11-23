@@ -48,14 +48,73 @@
 
     // Bugün
     const todayCard = h('div', { class: 'card' },
-      h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Bugün hangi program çalsın?' }), h('p', { text: s.day.schoolDay ? 'Seçim sadece bugün için geçerli; yarın varsayılana döner.' : 'Bugün ders yok: ' + s.day.reason }))),
+      h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Bugün hangi program çalsın?' }), h('p', { text: s.day.schoolDay ? sourceText(s.day) + ' Buradan seçim sadece bugün için geçerli.' : 'Bugün ders yok: ' + s.day.reason }))),
       segmented(Object.entries(c.programs).map(([id, p]) => [id, p.name]), s.day.programId, async (id) => {
         await save(api('POST', '/program/today', { program: id }), 'Bugün: ' + c.programs[id].name);
       }, 'block'));
 
     root.append(h('div', { class: 'grid two' },
-      h('div', { class: 'grid' }, todayCard, editorCard(), musicCard()),
+      h('div', { class: 'grid' }, todayCard, rulesCard(), editorCard(), musicCard()),
       h('div', { class: 'grid' }, timelineCard())));
+  }
+
+  function sourceText(day) {
+    const src = day.programSource;
+    if (src === 'today') return 'Bugün için elle seçildi.';
+    if (src === 'range') return '"' + (day.programSourceLabel || day.programName) + '" tarih aralığından geliyor.';
+    if (src === 'weekday') return DAYS[serverNow().getDay()] + ' günleri için ayarlı program.';
+    return 'Varsayılan program.';
+  }
+
+  // Haftanın günlerine ve tarih aralıklarına program atama
+  function rulesCard() {
+    const c = App.config;
+    const progs = Object.entries(c.programs);
+    const dp = { ...(c.dayPrograms || {}) };
+    const ranges = (c.rangePrograms || []).map((r) => ({ ...r }));
+    const saveRules = () => {
+      // Panelin elindeki ayarları da güncelle (sayfa yeniden çizilince eski hali görünmesin)
+      c.dayPrograms = { ...dp };
+      c.rangePrograms = ranges.map((r) => ({ ...r }));
+      return save(api('PUT', '/program-rules', { dayPrograms: dp, rangePrograms: ranges }));
+    };
+    const days = [1, 2, 3, 4, 5, 6, 0].filter((n) => c.weekdays.includes(n));
+    const dayRows = h('div', { class: 'list-rows' }, days.map((n) => {
+      const sel = h('select', { 'aria-label': DAYS[n] + ' programı' },
+        h('option', { value: '', text: 'Varsayılan (' + c.programs[c.activeProgram].name + ')', selected: !dp[n] }),
+        progs.map(([id, p]) => h('option', { value: id, text: p.name, selected: dp[n] === id })));
+      sel.onchange = () => { if (sel.value) dp[n] = sel.value; else delete dp[n]; saveRules(); };
+      return h('div', { class: 'list-row' }, h('span', { style: { width: '92px', fontWeight: 600 }, text: DAYS[n] }), h('div', { class: 'grow' }, sel));
+    }));
+    const rangeBox = h('div', { class: 'list-rows' });
+    const drawRanges = () => {
+      rangeBox.innerHTML = '';
+      if (!ranges.length) rangeBox.append(h('div', { class: 'small muted', text: 'Örn. sınav haftası boyunca "Sınav günü" programı çalsın.' }));
+      ranges.forEach((r, i) => {
+        const from = h('input', { type: 'date', value: r.from, 'aria-label': 'Başlangıç' });
+        const to = h('input', { type: 'date', value: r.to, 'aria-label': 'Bitiş' });
+        const sel = h('select', { 'aria-label': 'Program' }, progs.map(([id, p]) => h('option', { value: id, text: p.name, selected: r.program === id })));
+        const name = h('input', { value: r.name || '', placeholder: 'Ad (örn. Sınav haftası)', 'aria-label': 'Ad' });
+        from.onchange = () => { r.from = from.value; saveRules(); };
+        to.onchange = () => { r.to = to.value; saveRules(); };
+        sel.onchange = () => { r.program = sel.value; saveRules(); };
+        name.onchange = () => { r.name = name.value; saveRules(); };
+        rangeBox.append(h('div', { class: 'card', style: { padding: '12px', boxShadow: 'none', background: 'var(--surface-2)' } },
+          h('div', { class: 'row' }, h('div', { class: 'grow', style: { minWidth: '130px' } }, from), h('span', { class: 'muted', text: '→' }), h('div', { class: 'grow', style: { minWidth: '130px' } }, to)),
+          h('div', { class: 'row', style: { marginTop: '8px' } }, h('div', { class: 'grow', style: { minWidth: '130px' } }, sel), h('div', { class: 'grow', style: { minWidth: '130px' } }, name),
+            h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Sil', onclick: () => { ranges.splice(i, 1); drawRanges(); saveRules(); } }, icon('trash', 'sm')))));
+      });
+      rangeBox.append(h('button', { class: 'btn sm', style: { alignSelf: 'flex-start' }, type: 'button', onclick: () => {
+        const t = serverNow().toISOString().slice(0, 10);
+        ranges.push({ from: t, to: t, program: progs.find(([id]) => id !== c.activeProgram)?.[0] || c.activeProgram, name: '' });
+        drawRanges(); saveRules();
+      } }, icon('plus', 'sm'), 'Tarih aralığı ekle'));
+    };
+    drawRanges();
+    return h('div', { class: 'card' },
+      h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Otomatik program seçimi' }), h('p', { text: 'Program kendiliğinden değişsin. Öncelik: bugüne seçim › tarih aralığı › gün › varsayılan' }))),
+      h('div', { class: 'lbl', style: { marginTop: 0 }, text: 'Haftanın günlerine göre' }), dayRows,
+      h('div', { class: 'lbl', text: 'Tarih aralığına göre' }), rangeBox);
   }
 
   function editorCard() {

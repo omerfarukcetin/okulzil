@@ -268,12 +268,88 @@
     setText('js-duty-line', duty.join(' · ') || 'Henüz girilmedi');
     setText('js-menu-line', (b.menu || []).join(' · ') || 'Henüz girilmedi');
     setText('js-ticker', b.ticker || state.schoolName);
+    renderWeather();
+    renderCountdowns();
     renderAnnouncements();
     const day = state.day;
     setText('js-prog', day.schoolDay ? day.programName : day.reason);
     setText('js-last', day.lessons.length ? day.lessons[day.lessons.length - 1].end : '—');
     updateLayout();
   }
+
+  // ---------- Hava durumu ----------
+  const WX = {
+    sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/>',
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/>',
+    partly: '<path d="M8 3v1.5M3.5 7.5H5M4.6 4.1l1 1M12.4 4.1l-1 1"/><path d="M5.6 10.3A4 4 0 1 1 11.8 6"/><path d="M7 20h10a4 4 0 1 0-.8-7.9A5 5 0 0 0 7 14a3 3 0 0 0 0 6Z"/>',
+    cloud: '<path d="M7 19h10a4.5 4.5 0 1 0-.9-8.9A6 6 0 0 0 5 12.5 3.5 3.5 0 0 0 7 19Z"/>',
+    fog: '<path d="M4 10h16M3 14h18M6 18h12"/><path d="M7 6.5a5 5 0 0 1 9.5 1"/>',
+    rain: '<path d="M7 15h10a4 4 0 1 0-.8-7.9A5.5 5.5 0 0 0 5 9a3 3 0 0 0 2 6Z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+    snow: '<path d="M7 14h10a4 4 0 1 0-.8-7.9A5.5 5.5 0 0 0 5 8a3 3 0 0 0 2 6Z"/><path d="M8 18h.01M12 20h.01M16 18h.01M10 22h.01M14 22h.01"/>',
+    storm: '<path d="M7 14h10a4 4 0 1 0-.8-7.9A5.5 5.5 0 0 0 5 8a3 3 0 0 0 2 6Z"/><path d="m12 14-2 4h3l-2 4"/>'
+  };
+  function wxIcon(code, day) {
+    if (code === 0 || code === 1) return day ? 'sun' : 'moon';
+    if (code === 2) return 'partly';
+    if (code === 3) return 'cloud';
+    if (code === 45 || code === 48) return 'fog';
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+    if (code >= 95) return 'storm';
+    return 'rain';
+  }
+  function renderWeather() {
+    const w = state.weather;
+    const show = !!w && (state.display || {}).showWeather !== false;
+    all('js-weather').forEach((el) => {
+      el.classList.toggle('hide', !show);
+      if (!show) return;
+      const key = w.code + ':' + w.temp + ':' + w.isDay + ':' + w.max + ':' + w.min;
+      if (el.dataset.key === key) return;
+      el.dataset.key = key;
+      el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + WX[wxIcon(w.code, w.isDay)] + '</svg><b></b><span></span>';
+      el.querySelector('b').textContent = w.temp + '°';
+      el.querySelector('span').textContent = w.max + '° / ' + w.min + '°';
+    });
+  }
+
+  // ---------- Geri sayım ----------
+  function upcomingCountdowns() {
+    const list = (state.board && state.board.countdowns) || [];
+    const d = now();
+    const today = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    return list.map((c) => {
+      const [y, m, dd] = c.date.split('-').map(Number);
+      return { title: c.title, days: Math.round((new Date(y, m - 1, dd).getTime() - today) / 86400000) };
+    }).filter((c) => c.days >= 0).sort((a, b) => a.days - b.days);
+  }
+  function cdText(c) { return c.days === 0 ? 'Bugün!' : c.days === 1 ? 'Yarın' : c.days + ' gün'; }
+  function cdTitle(t) { return t; }
+  function renderCountdowns() {
+    const show = (state.display || {}).showCountdown !== false;
+    const list = show ? upcomingCountdowns() : [];
+    all('js-cd').forEach((el) => {
+      el.classList.toggle('hide', !list.length);
+      el.innerHTML = '';
+      for (const c of list.slice(0, 2)) {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.innerHTML = '<span class="t"></span><span class="n"></span>';
+        chip.querySelector('.t').textContent = cdTitle(c.title);
+        chip.querySelector('.n').textContent = cdText(c);
+        el.appendChild(chip);
+      }
+    });
+    // Geri sayım varsa "Bugünkü program" kutuları yerine geri sayım görünür
+    all('js-info-chips').forEach((el) => el.classList.toggle('hide', !!list.length));
+    all('js-cd-one').forEach((el) => {
+      el.classList.toggle('hide', !list.length);
+      if (!list.length) return;
+      el.innerHTML = '<span class="t"></span><span class="n"></span>';
+      el.querySelector('.t').textContent = cdTitle(list[0].title);
+      el.querySelector('.n').textContent = cdText(list[0]);
+    });
+  }
+  setInterval(() => state && renderCountdowns(), 10 * 60 * 1000);
 
   function renderAnnouncements() {
     const list = (state && state.board.announcements) || [];

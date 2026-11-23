@@ -208,3 +208,20 @@ body.phase-on .f-bar > .f-ann { display: none; }
 body.phase-on .f-bar > .f-status { display: flex; }
 body.big-count .f-bar > .f-clock { background: var(--phase); color: var(--on-phase); }
 body.big-count .f-bar > .f-clock .sub { color: var(--on-phase); }
+
+/* ---------- HAVA DURUMU ---------- */
+.top-right { display: flex; align-items: center; gap: 18px; }
+.weather { display: flex; align-items: center; gap: 10px; font-size: 22px; color: var(--text); }
+.weather svg { width: 34px; height: 34px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+body[data-theme="light"] .weather svg, body[data-theme="sand"] .weather svg { filter: brightness(.75); }
+.weather b { font-size: 26px; }
+.weather span { color: var(--muted); font-size: 17px; }
+
+/* ---------- GERİ SAYIM ---------- */
+.cd-chips .chip { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text); padding: 12px 18px; }
+.cd-chips .chip .t { font-size: 17px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-chips .chip .n { font-size: 26px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+body[data-theme="light"] .cd-chips .chip .n, body[data-theme="sand"] .cd-chips .chip .n { filter: brightness(.75); }
+.cd-card { background: var(--card); border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cd-card .t { font-size: 16px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-card .n { font-size: 28px; font-weight: 800; color: var(--accent); white-space: nowrap; }
