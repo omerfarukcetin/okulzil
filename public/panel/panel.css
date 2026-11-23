@@ -98,6 +98,33 @@ main { padding: 0 16px; }
 .cer-edit.open { display: block; }
 .step-row { display: grid; grid-template-columns: 1fr 90px 44px; gap: 6px; margin-top: 8px; }
 
+.warn { margin: 16px 16px 0; background: #FFF4DB; color: #6B4300; border: 1px solid #F2C46B; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
+
 .nav { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #E2E6EC; display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); }
 .nav button { min-height: 58px; border: 0; background: transparent; font-size: 13px; color: #4A5568; cursor: pointer; }
 .nav button.on { color: #0E1A2B; font-weight: 700; }
+
+/* ---------- Masaüstü / tablet ---------- */
+@media (min-width: 960px) {
+  body { background: #E9EDF2; }
+  .app { max-width: 1280px; padding-bottom: 32px; display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+  .app > *:not(.nav) { grid-column: 2; }
+  .head { border-radius: 0 0 18px 18px; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px 28px; }
+  .head-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .stats { min-width: 420px; }
+  .warn, .banner { margin: 16px 28px 0; }
+  main { padding: 0 28px; }
+  .nav { grid-column: 1; grid-row: 1 / span 10; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 4px; padding: 24px 12px; border-top: 0; border-right: 1px solid #E2E6EC; }
+  .nav button { min-height: 48px; text-align: left; padding: 0 16px; border-radius: 10px; font-size: 15px; }
+  .nav button.on { background: #0E1A2B; color: #fff; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .alarm-btn { min-height: 120px; font-size: 22px; }
+  #cerList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  #cerList .cer { margin-top: 0; }
+  #tab-cer .hint { margin-top: 20px; }
+  #tab-board .card { max-width: 760px; }
+  .btn.dashed { max-width: 360px; }
+}
+@media (min-width: 1280px) {
+  #tab-home .cols { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+}

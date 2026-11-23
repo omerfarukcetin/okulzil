@@ -25,7 +25,7 @@ function createPano() {
     backgroundColor: '#0E1A2B',
     webPreferences: { backgroundThrottling: false }
   });
-  pano.loadURL(`http://localhost:${PORT}/pano/?audio=1`);
+  pano.loadURL(`http://localhost:${PORT}/pano/`);
 
   // Pano çökerse ya da donarsa kendini yeniden yükler
   pano.webContents.on('render-process-gone', () => setTimeout(() => pano && pano.reload(), 2000));

@@ -79,12 +79,10 @@
     es = new EventSource('/events');
     es.addEventListener('state', (e) => {
       state = JSON.parse(e.data);
-      $('hConn').textContent = 'Sistem çalışıyor';
-      $('hConn').classList.remove('bad');
       renderState();
     });
     es.onerror = () => {
-      $('hConn').textContent = 'Bağlantı yok';
+      $('hConn').textContent = 'Sunucuya bağlantı yok';
       $('hConn').classList.add('bad');
     };
   }
@@ -97,6 +95,14 @@
 
   function renderHeader() {
     $('hSchool').textContent = state.schoolName;
+    const a = state.audio || { panos: 0, ready: 0 };
+    const audioMsg = a.ready ? 'Ses çıkışı hazır' : a.panos ? 'Ses kapalı: panoya tıklayın' : 'Pano açık değil, ses çıkmaz';
+    $('hConn').textContent = audioMsg;
+    $('hConn').classList.toggle('bad', !a.ready);
+    $('audioWarn').classList.toggle('hidden', !!a.ready);
+    $('audioWarn').textContent = a.panos
+      ? 'Pano sayfası açık ama sesi kapalı. Sistem odasındaki bilgisayarda pano ekranına bir kez tıklayın.'
+      : 'Ses çalacak pano sayfası açık değil. Sistem odasındaki bilgisayarda Chrome ile http://localhost:3000/pano/ adresini açın ve ekrana bir kez tıklayın.';
     const day = state.day;
     const next = day.events.find((e) => e.kind === 'bell' && e.time > nowHm());
     $('hNext').textContent = day.schoolDay ? (next ? next.time : 'Bitti') : '—';
@@ -167,6 +173,7 @@
   $('ringNow').onclick = async () => {
     const r = await api('POST', '/bell/ring', { bell: 'student' });
     if (!r.ok) alert(r.error);
+    else if (r.warning) alert(r.warning);
   };
   $('skipNext').onclick = async () => {
     const r = await api('POST', '/bell/skip');

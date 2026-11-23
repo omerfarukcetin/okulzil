@@ -48,9 +48,22 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   function broadcast(type, payload) {
     for (const res of clients) send(res, type, payload);
   }
+  // Ses çalan pano sayfaları (en az biri açık ve sesi açık olmalı)
+  const outputs = new Map();
+  function audioStatus() {
+    const fresh = [...outputs.values()].filter((o) => Date.now() - o.at < 15000);
+    return { panos: fresh.length, ready: fresh.filter((o) => o.ready).length };
+  }
+  let lastAudioKey = '';
+  setInterval(() => {
+    const k = JSON.stringify(audioStatus());
+    if (k !== lastAudioKey) { lastAudioKey = k; pushState(); }
+  }, 5000);
+
   function publicState() {
     const c = cfg();
     return {
+      audio: audioStatus(),
       mode: state.mode,
       alarm: state.alarm,
       ceremony: state.ceremony,
@@ -191,6 +204,18 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     res.json([...files]);
   });
 
+  app.post('/api/pano-status', (req, res) => {
+    const id = String(req.body.id || '').slice(0, 20);
+    if (id) {
+      const before = JSON.stringify(audioStatus());
+      outputs.set(id, { ready: !!req.body.ready, at: Date.now(), ip: req.ip });
+      for (const [k, o] of outputs) if (Date.now() - o.at > 60000) outputs.delete(k);
+      const after = JSON.stringify(audioStatus());
+      if (before !== after) { lastAudioKey = after; pushState(); }
+    }
+    res.json({ ok: true });
+  });
+
   // Pano töreni bitirdiğini bildirir (yerel çağrı)
   app.post('/api/ceremony/done', (req, res) => {
     if (state.ceremony && req.body.id === state.ceremony.id) endCeremony();
@@ -228,7 +253,13 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     if (state.mode !== 'normal') return res.json({ ok: false, error: 'Tören ya da alarm sürüyor' });
     ringBell(bell, 'Elle çalınan zil', false);
     log('Elle zil çalındı');
-    res.json({ ok: true });
+    const a = audioStatus();
+    const warning = !a.panos
+      ? 'Zil komutu gönderildi ama ses çalacak pano sayfası açık değil. Sistem odasındaki bilgisayarda pano sayfasını açın.'
+      : !a.ready
+        ? 'Pano açık ama sesi kapalı. Sistem odasındaki bilgisayarda pano ekranına bir kez tıklayın.'
+        : null;
+    res.json({ ok: true, warning });
   });
 
   api.post('/bell/skip', (req, res) => {

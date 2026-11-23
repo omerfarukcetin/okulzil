@@ -32,6 +32,8 @@
     </div>
   </header>
 
+  <div id="audioWarn" class="warn hidden" role="status"></div>
+
   <div id="activeBanner" class="banner hidden">
     <div><div id="bTag" class="b-tag"></div><div id="bName" class="b-name"></div></div>
     <button id="bStop" class="btn light">Durdur</button>
@@ -40,6 +42,8 @@
   <main>
     <!-- ANA SAYFA -->
     <section id="tab-home" class="tab active">
+     <div class="cols">
+      <div class="col-a">
       <div class="sec-head"><h2>Acil durum</h2>
         <button id="drillBtn" class="pill" aria-pressed="false">Tatbikat modu: Kapalı</button>
       </div>
@@ -71,12 +75,18 @@
           <button id="annSend" class="btn primary grow">Anons yap</button>
         </div>
       </div>
+      </div>
+      <div class="col-b">
       <h2>Bugünün akışı</h2>
       <div id="todayList" class="list"></div>
+      </div>
+     </div>
     </section>
 
     <!-- ZİL -->
     <section id="tab-bell" class="tab">
+     <div class="cols">
+      <div class="col-a">
       <h2>Bugün hangi program?</h2>
       <div id="todayProgs" class="pills"></div>
       <h2>Programı düzenle</h2>
@@ -101,9 +111,14 @@
         </div>
         <p id="progMsg" class="msg"></p>
       </div>
+      </div>
+      <div class="col-b">
+      <h2>Teneffüs</h2>
       <div class="card">
         <label class="check"><input id="breakMusic" type="checkbox"> Teneffüslerde müzik çal (sounds/muzik klasörü)</label>
       </div>
+      </div>
+     </div>
     </section>
 
     <!-- TÖRENLER -->
@@ -131,6 +146,8 @@
 
     <!-- AYARLAR -->
     <section id="tab-set" class="tab">
+     <div class="cols">
+      <div class="col-a">
       <div class="card">
         <label for="sSchool">Okul adı</label>
         <input id="sSchool">
@@ -147,6 +164,8 @@
         <button id="saveSet" class="btn primary">Kaydet</button>
         <p id="setMsg" class="msg"></p>
       </div>
+      </div>
+      <div class="col-b">
       <h2>Ses testi</h2>
       <div class="pills" id="soundTests"></div>
       <h2>Bağlantı</h2>
@@ -154,6 +173,8 @@
       <h2>Kayıt</h2>
       <div id="logList" class="list small"></div>
       <button id="logout" class="btn">Çıkış yap</button>
+      </div>
+     </div>
     </section>
   </main>
 

@@ -2,7 +2,8 @@
 (function () {
   'use strict';
   const params = new URLSearchParams(location.search);
-  const AUDIO = params.get('audio') === '1';
+  // Ses varsayılan olarak açık. Sadece ek ekranlarda sessiz istenirse: ?audio=0
+  const AUDIO = params.get('audio') !== '0';
   const $ = (id) => document.getElementById(id);
   const pad = (n) => String(n).padStart(2, '0');
   const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -27,14 +28,42 @@
   // ---------- Ses ----------
   const AC = new (window.AudioContext || window.webkitAudioContext)();
   const active = new Set(); // çalan sesler
+  // Tarayıcı izin vermediyse AudioContext "suspended" durumda kalır
+  function audioReady() {
+    return AUDIO && AC.state === 'running';
+  }
   function checkGate() {
-    $('audioGate').classList.toggle('show', AUDIO && AC.state === 'suspended');
+    const wasHidden = !$('audioGate').classList.contains('show');
+    const need = AUDIO && !audioReady();
+    $('audioGate').classList.toggle('show', need);
+    if (!need && !wasHidden && AUDIO) overlay('Ses açık', 2500);
+    reportStatus();
   }
   // Sayfanın herhangi bir yerine tıklamak ya da bir tuşa basmak sesi açar
-  const unlock = () => AC.resume().then(checkGate);
+  const unlock = () => {
+    AC.resume().then(checkGate, checkGate);
+    checkGate();
+  };
   document.addEventListener('click', unlock);
   document.addEventListener('keydown', unlock);
-  setTimeout(() => AC.resume().finally(checkGate), 300);
+  AC.onstatechange = checkGate;
+  // Not: tarayıcı izin vermezse resume() hiç sonuçlanmaz; bu yüzden durumu ayrıca kontrol ediyoruz
+  AC.resume().catch(() => {});
+  setTimeout(checkGate, 500);
+  setInterval(checkGate, 5000);
+
+  // Sunucuya "ses çıkışı burada" bilgisini gönder (panelde gösterilir)
+  let lastReport = 0;
+  function reportStatus() {
+    if (!AUDIO || Date.now() - lastReport < 4000) return;
+    lastReport = Date.now();
+    fetch('/api/pano-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: PANO_ID, ready: audioReady() })
+    }).catch(() => {});
+  }
+  const PANO_ID = Math.random().toString(36).slice(2);
 
   // Fare hareket edince imleç görünür, 3 sn durunca TV'de görünmesin diye gizlenir
   let cursorTimer = null;

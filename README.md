@@ -21,7 +21,7 @@ Zil sistemi, koridor TV panosu, İstiklal Marşı / saygı duruşu törenleri ve
 3. Kurulum dosyası (.exe) üretmek için: `npm run dist` → `dist/` klasörü.
 
 Sadece tarayıcıda denemek için (Electron olmadan): `npm run server`, sonra
-- Pano: http://localhost:3000/pano/?audio=1 (sesi açmak için bir kez tıklayın)
+- Pano: http://localhost:3000/pano/ (sesi açmak için ekrana bir kez tıklayın; ek ekranlarda sessiz istenirse sonuna ?audio=0 ekleyin)
 - Panel: http://localhost:3000/panel/
 
 Testler: `npm test`
