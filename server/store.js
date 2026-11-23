@@ -23,6 +23,13 @@ function createStore(dataDir) {
     data.emergency = { ...defaults.emergency, ...(saved.emergency || {}) };
     data.display = { ...defaults.display, ...(saved.display || {}) };
     if (!Array.isArray(data.media)) data.media = [];
+    // Eski kayıtlar: törende ses başlatma ayarı yoksa ekle
+    for (const c of data.ceremonies || []) {
+      if (!c.soundStart) {
+        c.soundStart = c.id === 'kasim' ? 'auto' : 'command';
+        c.soundDelay = 0;
+      }
+    }
   } catch (e) {
     if (fs.existsSync(file)) {
       // Bozuk dosyayı yedekle, varsayılanlarla devam et.

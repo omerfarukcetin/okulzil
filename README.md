@@ -57,6 +57,19 @@ Sesli anons Windows'un metin okuma sesini kullanır. Türkçe ses yoksa:
 - Bilgisayara sabit IP verin; telefon paneli adresi değişmesin.
 - Windows Güvenlik Duvarı ilk açılışta soracak: **Özel ağlarda izin ver**.
 
+## Törenler: ekran ve ses ayrı
+
+Her tören iki adımlıdır:
+1. **Ekran açılır** (panelden "Ekranı aç" ya da otomatik saatinde). TV'lerde bayrak / saygı duruşu ekranı görünür, ses çalmaz.
+2. **Öğretmen işaret verince ses başlar:** panelde "▶ Başlat" ya da sistem odasındaki bilgisayarda **Enter / Boşluk**.
+
+Tören ayarlarında "Ses ne zaman başlasın" seçeneği:
+- **Öğretmen komutuyla** (varsayılan)
+- **Kendiliğinden**: otomatik açılışta ekran açıldıktan belirli dakika sonra çalar. Örn. 10 Kasım: ekran 09:00'da açılır, siren 09:05'te kendiliğinden başlar (yine de istenirse daha önce "Başlat"a basılabilir).
+
+Birden fazla adımlı törenlerde (örn. saygı duruşu → İstiklal Marşı) her adım için "öncesinde komut bekle" seçilebilir.
+Ekran açık kalıp 3 saat içinde komut gelmezse kendiliğinden kapanır.
+
 ## TV görünümü ve medya
 
 Panelde **Ekran** sekmesinden:

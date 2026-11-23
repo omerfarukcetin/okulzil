@@ -44,6 +44,11 @@ textarea { resize: vertical; }
 .banner.drill { background: #B26B00; }
 .b-tag { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
 .b-name { font-size: 17px; font-weight: 700; }
+.b-sub { font-size: 13px; margin-top: 2px; opacity: .9; }
+.b-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn.go { background: #fff; color: #0E1A2B; border: 0; font-weight: 800; min-height: 52px; padding: 0 22px; font-size: 17px; }
+.banner.ready { background: #1F5FBF; flex-wrap: wrap; }
+.btn.go-big { background: #1F5FBF; color: #fff; border-color: #1F5FBF; font-weight: 800; }
 .warn { margin: 16px 16px 0; background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
 
 main { padding: 0 16px; }

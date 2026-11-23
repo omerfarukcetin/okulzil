@@ -429,23 +429,68 @@
     return s.type;
   }
 
-  function renderSaygiSteps(steps, idx, remain) {
+  function renderSaygiSteps(steps, idx, remain, waiting) {
     const box = $('saygiSteps');
     box.innerHTML = '';
     steps.forEach((s, i) => {
       const row = document.createElement('div');
-      row.className = 'step' + (i === idx ? ' now' : '');
+      row.className = 'step' + (i === idx ? ' now' : '') + (i === idx && waiting ? ' ready' : '');
       row.innerHTML = '<span class="n"></span><span class="t"></span><span class="c"></span>';
       row.querySelector('.n').textContent = i + 1;
       row.querySelector('.t').textContent = stepLabel(s);
-      if (i === idx && remain != null) row.querySelector('.c').textContent = Math.floor(remain / 60) + ':' + pad(remain % 60);
+      if (i === idx && waiting) row.querySelector('.c').textContent = 'Hazır';
+      else if (i === idx && remain != null) row.querySelector('.c').textContent = Math.floor(remain / 60) + ':' + pad(remain % 60);
       box.appendChild(row);
     });
   }
 
+  // Bir adımın ekranını sesi başlatmadan hazırlar
+  function prepareStep(c, steps, i, waiting) {
+    const s = steps[i];
+    if (s.type === 'anthem') {
+      show('anthem');
+      $('stanza').textContent = STANZAS[0];
+      $('anthemBar').style.width = '0';
+      $('anthemSource').textContent = c.name + (waiting ? ' · başlamaya hazır' : '');
+      $('anthemTime').textContent = '';
+      $('scr-anthem').classList.toggle('waiting', !!waiting);
+    } else {
+      show('saygi');
+      renderSaygiSteps(steps, i, s.seconds || 60, waiting);
+    }
+  }
+
+  // Öğretmen komutu (panelden "Başlat" ya da sistem odasında Enter/Boşluk)
+  let goWaiter = null;
+  const goReceived = new Set(); // "töreninBaşlangıcı:adım"
+  function waitForGo(c, i, token) {
+    const key = c.startedAt + ':' + i;
+    if (goReceived.has(key)) return Promise.resolve();
+    return new Promise((resolve) => {
+      goWaiter = { key, resolve, token };
+    });
+  }
+  function receiveGo(cmdObj) {
+    if (!state || !state.ceremony || state.ceremony.id !== cmdObj.id) return;
+    const key = state.ceremony.startedAt + ':' + cmdObj.step;
+    goReceived.add(key);
+    if (goWaiter && goWaiter.key === key) { const w = goWaiter; goWaiter = null; w.resolve(); }
+  }
+  function reportProgress(c, step, waiting) {
+    if (!AUDIO) return;
+    fetch('/api/ceremony/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, step, waiting }) }).catch(() => {});
+  }
+  // Sistem odasındaki klavyeden başlatma
+  document.addEventListener('keydown', (e) => {
+    if (!goWaiter || !(e.key === 'Enter' || e.key === ' ')) return;
+    e.preventDefault();
+    fetch('/api/ceremony/go-local', { method: 'POST' }).catch(() => {});
+  });
+
   async function runCeremony(c) {
     const token = ++runToken;
     runningCeremonyAt = c.startedAt;
+    goWaiter = null;
     stopMusic();
     stopAllAudio();
     const steps = c.steps || [];
@@ -454,8 +499,15 @@
     for (let i = 0; i < steps.length; i++) {
       if (token !== runToken) return;
       const s = steps[i];
+      if (s.wait) {
+        prepareStep(c, steps, i, true);
+        reportProgress(c, i, true);
+        await waitForGo(c, i, token);
+        if (token !== runToken) return;
+      }
+      reportProgress(c, i, false);
+      prepareStep(c, steps, i, false);
       if (s.type === 'siren' || s.type === 'silence') {
-        show('saygi');
         const total = s.seconds || 60;
         let remain = total;
         renderSaygiSteps(steps, i, remain);
@@ -464,11 +516,6 @@
         else await new Promise((r) => setTimeout(r, total * 1000));
         clearInterval(iv);
       } else if (s.type === 'anthem') {
-        show('anthem');
-        $('stanza').textContent = STANZAS[0];
-        $('anthemBar').style.width = '0';
-        $('anthemSource').textContent = c.name;
-        $('anthemTime').textContent = '';
         const ok = await playFile(state.sounds.anthem, {
           onProgress(t, dur) {
             $('anthemBar').style.width = (t / dur) * 100 + '%';
@@ -478,7 +525,6 @@
         });
         if (!ok) {
           // Ses dosyası yoksa ekranı kısa süre göster
-          $('stanza').textContent = STANZAS[0];
           await new Promise((r) => setTimeout(r, 8000));
         }
       }
@@ -588,6 +634,8 @@
       c.on ? startMusic() : stopMusic();
     } else if (c.action === 'ceremony') {
       runCeremony(c.ceremony);
+    } else if (c.action === 'ceremonyGo') {
+      receiveGo(c);
     } else if (c.action === 'alarm') {
       runAlarm(c.alarm);
     } else if (c.action === 'stopAll') {
@@ -595,6 +643,7 @@
       runToken++;
       runningAlarmAt = null;
       runningCeremonyAt = null;
+      goWaiter = null;
       stopMusic();
       stopAllAudio();
       show('normal');
@@ -617,7 +666,12 @@
       tickClock();
       // Bağlantı kopup geri gelirse kaçırılan alarmı/töreni sürdür
       if (state.mode === 'alarm' && runningAlarmAt !== state.alarm.startedAt) runAlarm(state.alarm);
-      if (state.mode === 'ceremony' && runningCeremonyAt !== state.ceremony.startedAt) runCeremony(state.ceremony);
+      if (state.mode === 'ceremony' && runningCeremonyAt !== state.ceremony.startedAt) {
+        // Sayfa yenilendiyse daha önce başlatılmış adımlar için tekrar komut bekleme
+        const c = state.ceremony;
+        for (let i = 0; i < c.step + (c.waiting ? 0 : 1); i++) goReceived.add(c.startedAt + ':' + i);
+        runCeremony(c);
+      }
       if (state.mode === 'normal' && (runningAlarmAt || (prev && prev.mode === 'alarm'))) {
         runningAlarmAt = null;
         alarmToken++;

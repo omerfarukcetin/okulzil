@@ -148,10 +148,19 @@
       $('bName').textContent = state.alarm.name + ' alarmı çalıyor';
       $('bStop').textContent = 'Alarmı durdur';
     } else if (state.mode === 'ceremony') {
-      $('bTag').textContent = "ŞU AN TV'LERDE";
-      $('bName').textContent = state.ceremony.name;
-      $('bStop').textContent = 'Durdur';
+      const c = state.ceremony;
+      const st = c.steps[c.step] || {};
+      b.classList.toggle('ready', !!c.waiting);
+      b.classList.toggle('cer', !c.waiting);
+      $('bTag').textContent = c.waiting ? "EKRAN AÇIK · KOMUT BEKLİYOR" : "ŞU AN ÇALIYOR";
+      $('bName').textContent = c.name + ' · ' + (STEP_NAMES[st.type] || '');
+      $('bSub').textContent = c.waiting
+        ? (c.autoGoAt ? 'Otomatik başlama: ' + new Date(c.autoGoAt).toTimeString().slice(0, 5) + ' (isterseniz şimdi başlatın)' : 'Öğretmen işaret verince "Başlat"a basın. Sistem odasında Enter tuşu da başlatır.')
+        : '';
+      $('bStop').textContent = c.waiting ? 'Ekranı kapat' : 'Durdur';
     }
+    $('bGo').classList.toggle('hidden', !(state.mode === 'ceremony' && state.ceremony.waiting));
+    if (state.mode !== 'ceremony') { b.classList.remove('ready'); $('bSub').textContent = ''; }
     renderToday();
     renderTodayProgs();
     if (config) renderCeremonies();
@@ -196,6 +205,10 @@
     scrollTo(0, 0);
   };
   $('bStop').onclick = () => api('POST', '/stop');
+  $('bGo').onclick = async () => {
+    const r = await api('POST', '/ceremony/go');
+    if (!r.ok) alert(r.error);
+  };
   $('ringNow').onclick = async () => {
     const r = await api('POST', '/bell/ring', { bell: 'student' });
     if (!r.ok) alert(r.error);
@@ -295,15 +308,18 @@
 
   // ---------- Törenler ----------
   const openEditors = new Set();
+  function soundText(c) {
+    if (c.soundStart !== 'auto') return 'ses öğretmen komutuyla başlar';
+    return c.mode === 'auto' && c.soundDelay > 0 ? 'ses ' + c.soundDelay + ' dk sonra kendiliğinden başlar' : 'ses ekranla birlikte başlar';
+  }
   function whenText(c) {
     if (c.mode === 'off') return 'Kapalı · çalmaz';
-    if (c.mode === 'manual') return 'Sadece elle başlatılır';
+    if (c.mode === 'manual') return 'Ekran elle açılır · ' + soundText(c);
     const r = c.rule;
     if (!r) return 'Otomatik saat tanımlı değil';
     const t = r.time === 'afterLast' ? 'son dersten sonra' : r.time;
-    if (r.type === 'weekly') return 'Her ' + DAYS[r.day].toLowerCase() + ' · ' + t;
-    if (r.type === 'yearly') return 'Her yıl ' + (r.dates || []).join(', ') + ' · ' + t;
-    return '';
+    const when = r.type === 'weekly' ? 'Her ' + DAYS[r.day].toLowerCase() : 'Her yıl ' + (r.dates || []).join(', ');
+    return when + ' ' + t + ' ekran açılır · ' + soundText(c);
   }
 
   function renderCeremonies() {
@@ -330,17 +346,32 @@
       const chips = el('div', 'chips');
       for (const s of c.steps) chips.appendChild(el('span', '', STEP_NAMES[s.type] + (s.seconds ? ' ' + Math.round(s.seconds / 60 * 10) / 10 + ' dk' : '')));
       const actions = el('div', 'row');
-      const start = el('button', 'btn primary grow', 'Şimdi başlat');
-      const running = state && state.mode === 'ceremony' && state.ceremony.id === c.id;
-      if (running) start.textContent = 'Çalıyor…';
-      start.disabled = !!running || (state && state.mode === 'alarm');
-      start.onclick = async () => {
-        const r = await api('POST', '/ceremonies/' + c.id + '/start');
-        if (!r.ok) alert(r.error);
-      };
+      const open = state && state.mode === 'ceremony' && state.ceremony.id === c.id;
+      const waiting = open && state.ceremony.waiting;
+      let start;
+      if (waiting) {
+        start = el('button', 'btn go-big grow', '▶ Başlat');
+        start.onclick = async () => { const r = await api('POST', '/ceremony/go'); if (!r.ok) alert(r.error); };
+        const close = el('button', 'btn', 'Ekranı kapat');
+        close.onclick = () => api('POST', '/stop');
+        actions.append(start, close);
+      } else if (open) {
+        start = el('button', 'btn primary grow', 'Çalıyor…');
+        start.disabled = true;
+        const stop = el('button', 'btn', 'Durdur');
+        stop.onclick = () => api('POST', '/stop');
+        actions.append(start, stop);
+      } else {
+        start = el('button', 'btn primary grow', c.soundStart === 'auto' ? 'Başlat' : 'Ekranı aç');
+        start.disabled = !!(state && state.mode !== 'normal');
+        start.onclick = async () => {
+          const r = await api('POST', '/ceremonies/' + c.id + '/start');
+          if (!r.ok) alert(r.error);
+        };
+      }
       const edit = el('button', 'btn', openEditors.has(c.id) ? 'Kapat' : 'Düzenle');
       edit.onclick = () => { openEditors.has(c.id) ? openEditors.delete(c.id) : openEditors.add(c.id); renderCeremonies(); };
-      actions.append(start, edit);
+      actions.append(...(open ? [] : [start]), edit);
       card.append(head, seg, chips, actions);
       if (openEditors.has(c.id)) card.appendChild(cerEditor(c));
       box.appendChild(card);
@@ -384,6 +415,18 @@
     afterLast.onchange = syncRule;
     syncRule();
 
+    const sound = el('select'); sound.setAttribute('aria-label', 'Ses ne zaman başlasın');
+    for (const [v, t] of [['command', 'Öğretmen komutuyla (ekran açılır, "Başlat"a basılınca çalar)'], ['auto', 'Kendiliğinden']]) { const o = el('option', '', t); o.value = v; sound.appendChild(o); }
+    sound.value = draft.soundStart === 'auto' ? 'auto' : 'command';
+    const delayWrap = el('div');
+    const delayLabel = el('label', '', 'Otomatik açılışta ekran açıldıktan kaç dakika sonra çalsın (0 = hemen)');
+    const delay = el('input'); delay.type = 'number'; delay.min = 0; delay.max = 120; delay.value = draft.soundDelay || 0;
+    delayLabel.htmlFor = delay.id = 'delay-' + c.id;
+    delayWrap.append(delayLabel, delay);
+    const syncSound = () => delayWrap.classList.toggle('hidden', sound.value !== 'auto');
+    sound.onchange = syncSound;
+    syncSound();
+
     const stepsBox = el('div');
     function renderSteps() {
       stepsBox.innerHTML = '';
@@ -401,6 +444,13 @@
         x.onclick = () => { draft.steps.splice(i, 1); renderSteps(); };
         row.append(t, sec, x);
         stepsBox.appendChild(row);
+        if (i > 0) {
+          const wl = el('label', 'check');
+          const w = el('input'); w.type = 'checkbox'; w.checked = !!s.wait;
+          w.onchange = () => { s.wait = w.checked; };
+          wl.append(w, document.createTextNode('Bu adımdan önce öğretmen komutunu bekle'));
+          stepsBox.appendChild(wl);
+        }
       });
     }
     renderSteps();
@@ -422,7 +472,7 @@
         rule.onlySchoolDays = school.checked;
       }
       if (!draft.steps.length) { msg.textContent = 'En az bir adım ekleyin'; msg.classList.add('bad'); return; }
-      const res = await api('PUT', '/ceremonies/' + c.id, { name: name.value.trim() || c.name, rule, steps: draft.steps, mode: !rule && c.mode === 'auto' ? 'manual' : c.mode });
+      const res = await api('PUT', '/ceremonies/' + c.id, { name: name.value.trim() || c.name, rule, steps: draft.steps, soundStart: sound.value, soundDelay: Number(delay.value) || 0, mode: !rule && c.mode === 'auto' ? 'manual' : c.mode });
       if (res.ok) { openEditors.delete(c.id); await loadConfig(); }
       else { msg.textContent = res.error; msg.classList.add('bad'); }
     };
@@ -432,11 +482,12 @@
       await loadConfig();
     };
     const l1 = el('label', '', 'Tören adı');
-    const l2 = el('label', '', 'Otomatik çalışma');
+    const l2 = el('label', '', 'Ekran otomatik ne zaman açılsın');
+    const l4 = el('label', '', 'Ses ne zaman başlasın');
     const l3 = el('label', '', 'Adımlar (süre saniye)');
     const r1 = el('div', 'row'); r1.append(addStep);
     const r2 = el('div', 'row'); r2.append(save, del);
-    box.append(l1, name, l2, type, ruleBox, l3, stepsBox, r1, r2, msg);
+    box.append(l1, name, l2, type, ruleBox, l4, sound, delayWrap, l3, stepsBox, r1, r2, msg);
     return box;
   }
   $('addCer').onclick = async () => {

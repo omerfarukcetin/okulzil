@@ -38,8 +38,11 @@
   <div id="audioWarn" class="warn hidden" role="status"></div>
 
   <div id="activeBanner" class="banner hidden">
-    <div><div id="bTag" class="b-tag"></div><div id="bName" class="b-name"></div></div>
-    <button id="bStop" class="btn light">Durdur</button>
+    <div class="grow"><div id="bTag" class="b-tag"></div><div id="bName" class="b-name"></div><div id="bSub" class="b-sub"></div></div>
+    <div class="b-actions">
+      <button id="bGo" class="btn go hidden">▶ Başlat</button>
+      <button id="bStop" class="btn light">Durdur</button>
+    </div>
   </div>
 
   <main>
@@ -126,7 +129,7 @@
 
     <!-- TÖRENLER -->
     <section id="tab-cer" class="tab">
-      <p class="hint">Her tören otomatik çalışabilir, sadece elle başlatılabilir ya da kapatılabilir. "Şimdi başlat" her zaman çalışır.</p>
+      <p class="hint">Tören iki adımlıdır: önce <b>ekran açılır</b>, öğretmen işaret verince <b>"Başlat"</b> ile ses çalar. Otomatik törenlerde ekran belirlenen saatte kendisi açılır. Sistem odasındaki bilgisayarda Enter tuşu da başlatır.</p>
       <div id="cerList"></div>
       <button id="addCer" class="btn dashed">+ Yeni tören ekle</button>
     </section>

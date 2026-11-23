@@ -120,6 +120,8 @@ body[data-theme="light"] .label { filter: brightness(.75); }
 .steps { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
 .step { display: flex; align-items: center; gap: 16px; background: #1E1E1E; border-radius: 12px; padding: 16px 20px; font-size: 20px; }
 .step.now { background: #EDEBE7; color: #121212; font-weight: 700; }
+.step.ready { background: #2A2A2A; color: #EDEBE7; outline: 2px solid #EDEBE7; }
+#scr-anthem.waiting .bar { opacity: 0; }
 .step .n { width: 40px; font-weight: 700; }
 .step .t { flex: 1; }
 .step .c { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }

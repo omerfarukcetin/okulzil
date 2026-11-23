@@ -6,6 +6,9 @@ const express = require('express');
 const { createStore } = require('./store');
 const { createScheduler } = require('./scheduler');
 
+const STEP_LABELS = { siren: 'Siren ve saygı duruşu', silence: 'Saygı duruşu', anthem: 'İstiklal Marşı' };
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
 const ALARMS = {
   deprem: 'Deprem',
   yangin: 'Yangın',
@@ -92,13 +95,45 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     const c = cfg().ceremonies.find((x) => x.id === id);
     if (!c) return { ok: false, error: 'Tören bulunamadı' };
     if (c.mode === 'off' && source === 'auto') return { ok: false, error: 'Tören kapalı' };
+    if (!c.steps || !c.steps.length) return { ok: false, error: 'Törende adım yok' };
     stopMusic();
+    // Ekran hemen açılır. Ses: "command" ise öğretmen komutuyla, "auto" ise hemen
+    // (otomatik zamanlamada soundDelay dakika sonra) başlar.
+    const soundStart = c.soundStart === 'auto' ? 'auto' : 'command';
+    const delay = Math.max(0, Number(c.soundDelay) || 0);
+    const autoGoAt = soundStart === 'auto' && source === 'auto' && delay > 0 ? Date.now() + delay * 60000 : null;
+    const firstWait = soundStart === 'command' || !!autoGoAt;
+    const steps = c.steps.map((s, i) => ({ ...s, wait: i === 0 ? firstWait : !!s.wait }));
     state.mode = 'ceremony';
-    state.ceremony = { id: c.id, name: c.name, steps: c.steps, startedAt: Date.now(), source };
-    clearTimeout(ceremonyTimer);
-    ceremonyTimer = setTimeout(() => endCeremony('zaman aşımı'), 15 * 60 * 1000);
-    log('Tören başladı: ' + c.name + ' (' + (source === 'auto' ? 'otomatik' : 'elle') + ')');
+    state.ceremony = { id: c.id, name: c.name, steps, startedAt: Date.now(), source, step: 0, waiting: firstWait, autoGoAt };
+    clearTimeout(goTimer);
+    if (autoGoAt) goTimer = setTimeout(() => ceremonyGo('otomatik'), autoGoAt - Date.now());
+    armCeremonyTimer();
+    log('Tören ekranı açıldı: ' + c.name + ' (' + (source === 'auto' ? 'otomatik' : 'elle') + ')' + (firstWait && !autoGoAt ? ' · ses komut bekliyor' : ''));
     cmd({ action: 'ceremony', ceremony: state.ceremony });
+    pushState();
+    return { ok: true };
+  }
+
+  // Komut beklerken ekran uzun süre açık kalabilir (ör. 08:00'de açılıp 08:50'de başlatılır)
+  function armCeremonyTimer() {
+    clearTimeout(ceremonyTimer);
+    const waiting = state.ceremony && state.ceremony.waiting;
+    ceremonyTimer = setTimeout(() => endCeremony(waiting ? 'komut gelmedi, ekran kapandı' : 'zaman aşımı'), (waiting ? 3 * 60 : 15) * 60 * 1000);
+  }
+
+  let goTimer = null;
+  function ceremonyGo(by) {
+    const c = state.ceremony;
+    if (state.mode !== 'ceremony' || !c) return { ok: false, error: 'Açık tören yok' };
+    if (!c.waiting) return { ok: false, error: 'Tören şu an zaten çalıyor' };
+    clearTimeout(goTimer);
+    c.waiting = false;
+    c.autoGoAt = null;
+    armCeremonyTimer();
+    const st = c.steps[c.step] || {};
+    log('Tören başladı: ' + c.name + ' · ' + (STEP_LABELS[st.type] || st.type) + ' (' + by + ')');
+    cmd({ action: 'ceremonyGo', id: c.id, step: c.step });
     pushState();
     return { ok: true };
   }
@@ -106,6 +141,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   function endCeremony(why) {
     if (state.mode !== 'ceremony') return;
     clearTimeout(ceremonyTimer);
+    clearTimeout(goTimer);
     log('Tören bitti: ' + state.ceremony.name + (why ? ' (' + why + ')' : ''));
     state.mode = 'normal';
     state.ceremony = null;
@@ -115,6 +151,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   function startAlarm(type, drill) {
     if (!ALARMS[type]) return { ok: false, error: 'Bilinmeyen alarm türü' };
     clearTimeout(ceremonyTimer);
+    clearTimeout(goTimer);
     stopMusic();
     state.mode = 'alarm';
     state.ceremony = null;
@@ -127,6 +164,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
 
   function stopAll(by) {
     clearTimeout(ceremonyTimer);
+    clearTimeout(goTimer);
     if (state.mode === 'alarm') log('Alarm durduruldu' + (by ? ' (' + by + ')' : ''));
     if (state.mode === 'ceremony') log('Tören durduruldu' + (by ? ' (' + by + ')' : ''));
     state.mode = 'normal';
@@ -223,6 +261,29 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   });
 
   // Pano töreni bitirdiğini bildirir (yerel çağrı)
+  // Pano hangi adımda olduğunu ve komut bekleyip beklemediğini bildirir
+  app.post('/api/ceremony/progress', (req, res) => {
+    const c = state.ceremony;
+    if (c && req.body.id === c.id) {
+      const step = Number(req.body.step) || 0;
+      const waiting = !!req.body.waiting;
+      if (c.step !== step || c.waiting !== waiting) {
+        c.step = step;
+        c.waiting = waiting;
+        armCeremonyTimer();
+        pushState();
+      }
+      if (waiting && c.autoGoAt && Date.now() >= c.autoGoAt) ceremonyGo('otomatik');
+    }
+    res.json({ ok: true });
+  });
+
+  // Sistem odasındaki bilgisayarda pano ekranında Enter / Boşluk ile başlatma
+  app.post('/api/ceremony/go-local', (req, res) => {
+    if (!LOOPBACK.has(req.ip)) return res.status(403).json({ ok: false, error: 'Sadece sistem odasındaki bilgisayardan' });
+    res.json(ceremonyGo('sistem odası klavyesi'));
+  });
+
   app.post('/api/ceremony/done', (req, res) => {
     if (state.ceremony && req.body.id === state.ceremony.id) endCeremony();
     res.json({ ok: true });
@@ -318,6 +379,8 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       if (req.body.name) t.name = req.body.name;
       if (req.body.rule !== undefined) t.rule = req.body.rule;
       if (Array.isArray(req.body.steps)) t.steps = req.body.steps;
+      if (['command', 'auto'].includes(req.body.soundStart)) t.soundStart = req.body.soundStart;
+      if (req.body.soundDelay != null) t.soundDelay = Math.max(0, Math.min(120, Number(req.body.soundDelay) || 0));
     });
     if (!found) return res.status(404).json({ ok: false, error: 'Tören bulunamadı' });
     pushState();
@@ -327,7 +390,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   api.post('/ceremonies', (req, res) => {
     const id = 't' + Date.now().toString(36);
     store.update((c) => {
-      c.ceremonies.push({ id, name: req.body.name || 'Yeni tören', mode: 'manual', rule: null, steps: [{ type: 'anthem' }] });
+      c.ceremonies.push({ id, name: req.body.name || 'Yeni tören', mode: 'manual', soundStart: 'command', soundDelay: 0, rule: null, steps: [{ type: 'anthem' }] });
     });
     res.json({ ok: true, id });
   });
@@ -340,6 +403,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   });
 
   api.post('/ceremonies/:id/start', (req, res) => res.json(startCeremony(req.params.id, 'manual')));
+  api.post('/ceremony/go', (req, res) => res.json(ceremonyGo('panel')));
   api.post('/alarm', (req, res) => res.json(startAlarm(req.body.type, req.body.drill)));
   api.post('/stop', (req, res) => {
     stopAll('panel');

@@ -37,7 +37,7 @@ test('Hafta sonu zil yok', () => {
 test('10 Kasım hafta sonuna denk gelse de anma çalar', () => {
   const d = buildDay(cfg, new Date(2029, 10, 10)); // 10 Kasım 2029 Cumartesi
   assert.ok(!d.schoolDay);
-  assert.ok(d.events.some((e) => e.id === 'kasim' && e.time === '09:05'));
+  assert.ok(d.events.some((e) => e.id === 'kasim' && e.time === '09:00'));
 });
 
 test('Resmî tatilde zil susar', () => {
