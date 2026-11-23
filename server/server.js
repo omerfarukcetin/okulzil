@@ -26,6 +26,9 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   const cfg = () => store.get();
   const soundsDir = path.join(dataDir, 'sounds');
   fs.mkdirSync(path.join(soundsDir, 'muzik'), { recursive: true });
+  const mediaDir = path.join(dataDir, 'media');
+  fs.mkdirSync(mediaDir, { recursive: true });
+  const MEDIA_TYPES = { jpg: 'image', jpeg: 'image', png: 'image', webp: 'image', gif: 'image', mp4: 'video', webm: 'video', m4v: 'video' };
 
   const logFile = path.join(dataDir, 'kayit.log');
   const recent = [];
@@ -73,6 +76,8 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       schoolName: c.schoolName,
       board: c.board,
       emergency: c.emergency,
+      display: c.display,
+      media: c.media.filter((m) => m.enabled !== false),
       sounds: c.sounds,
       breakMusic: c.breakMusic,
       serverTime: Date.now()
@@ -177,6 +182,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   const pub = path.join(__dirname, '..', 'public');
   app.use('/pano', express.static(path.join(pub, 'pano')));
   app.use('/panel', express.static(path.join(pub, 'panel')));
+  app.use('/media', express.static(mediaDir, { maxAge: '1d' }));
   app.use('/sounds', express.static(soundsDir));
   if (bundledSoundsDir) app.use('/sounds', express.static(bundledSoundsDir));
   app.get('/', (req, res) => res.redirect('/panel/'));
@@ -376,6 +382,95 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       if (b.newPin && /^\d{4,8}$/.test(b.newPin)) c.pin = b.newPin;
     });
     log('Ayarlar güncellendi');
+    pushState();
+    res.json({ ok: true });
+  });
+
+  // --- Ekran görünümü ---
+  api.put('/display', (req, res) => {
+    const b = req.body;
+    store.update((c) => {
+      const d = c.display;
+      if (['dark', 'light'].includes(b.theme)) d.theme = b.theme;
+      if (['classic', 'media', 'fullmedia'].includes(b.layout)) d.layout = b.layout;
+      if (typeof b.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(b.accent)) d.accent = b.accent;
+      for (const k of ['showDuty', 'showMenu', 'mediaOnlyBreaks']) if (typeof b[k] === 'boolean') d[k] = b[k];
+    });
+    pushState();
+    res.json({ ok: true });
+  });
+
+  // --- Medya (video / resim / afiş) ---
+  // Dosya, gövdede ham veri olarak gelir: POST /api/media/upload?name=afis.jpg
+  api.post('/media/upload', (req, res) => {
+    const original = String(req.query.name || '').slice(0, 120);
+    const ext = path.extname(original).slice(1).toLowerCase();
+    const type = MEDIA_TYPES[ext];
+    if (!type) return res.status(400).json({ ok: false, error: 'Desteklenen dosyalar: JPG, PNG, WEBP, GIF, MP4, WEBM' });
+    const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const file = id + '.' + ext;
+    const dest = path.join(mediaDir, file);
+    const out = fs.createWriteStream(dest);
+    let size = 0;
+    const LIMIT = 2 * 1024 * 1024 * 1024;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > LIMIT) {
+        req.destroy();
+        out.destroy();
+        fs.unlink(dest, () => {});
+      }
+    });
+    req.pipe(out);
+    out.on('finish', () => {
+      if (size === 0 || size > LIMIT) {
+        fs.unlink(dest, () => {});
+        return res.status(400).json({ ok: false, error: size ? 'Dosya 2 GB sınırını aşıyor' : 'Dosya boş' });
+      }
+      const name = original.replace(/\.[^.]+$/, '') || file;
+      store.update((c) => {
+        c.media.push({ id, file, type, name, duration: 10, sound: false, enabled: true });
+      });
+      log('Medya eklendi: ' + name);
+      pushState();
+      res.json({ ok: true, id });
+    });
+    out.on('error', () => res.status(500).json({ ok: false, error: 'Dosya kaydedilemedi' }));
+  });
+
+  // Sıra, süre, ses, açık/kapalı güncellemesi
+  api.put('/media', (req, res) => {
+    const items = Array.isArray(req.body.items) ? req.body.items : null;
+    if (!items) return res.status(400).json({ ok: false, error: 'Liste eksik' });
+    store.update((c) => {
+      const byId = new Map(c.media.map((m) => [m.id, m]));
+      const next = [];
+      for (const it of items) {
+        const m = byId.get(it.id);
+        if (!m) continue;
+        if (typeof it.name === 'string' && it.name.trim()) m.name = it.name.trim().slice(0, 80);
+        if (it.duration != null) m.duration = Math.max(3, Math.min(600, Number(it.duration) || 10));
+        if (typeof it.sound === 'boolean') m.sound = it.sound;
+        if (typeof it.enabled === 'boolean') m.enabled = it.enabled;
+        next.push(m);
+        byId.delete(m.id);
+      }
+      c.media = next.concat([...byId.values()]);
+    });
+    pushState();
+    res.json({ ok: true });
+  });
+
+  api.delete('/media/:id', (req, res) => {
+    let removed = null;
+    store.update((c) => {
+      removed = c.media.find((m) => m.id === req.params.id);
+      c.media = c.media.filter((m) => m.id !== req.params.id);
+    });
+    if (removed) {
+      fs.unlink(path.join(mediaDir, path.basename(removed.file)), () => {});
+      log('Medya silindi: ' + removed.name);
+    }
     pushState();
     res.json({ ok: true });
   });

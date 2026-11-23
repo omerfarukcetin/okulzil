@@ -119,5 +119,14 @@
   },
   "emergency": {
     "assemblyArea": "Bahçe"
-  }
+  },
+  "display": {
+    "theme": "dark",
+    "accent": "#F2A93B",
+    "layout": "classic",
+    "showDuty": true,
+    "showMenu": true,
+    "mediaOnlyBreaks": false
+  },
+  "media": []
 }

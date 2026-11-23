@@ -21,6 +21,8 @@ function createStore(dataDir) {
     data.sounds = { ...defaults.sounds, ...(saved.sounds || {}) };
     data.board = { ...defaults.board, ...(saved.board || {}) };
     data.emergency = { ...defaults.emergency, ...(saved.emergency || {}) };
+    data.display = { ...defaults.display, ...(saved.display || {}) };
+    if (!Array.isArray(data.media)) data.media = [];
   } catch (e) {
     if (fs.existsSync(file)) {
       // Bozuk dosyayı yedekle, varsayılanlarla devam et.

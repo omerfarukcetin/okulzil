@@ -12,6 +12,32 @@
   const SHORT = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
   const STEP_NAMES = { siren: 'Siren', silence: 'Saygı duruşu (sessiz)', anthem: 'İstiklal Marşı' };
 
+  // ---------- Panel teması (otomatik / açık / koyu) ----------
+  const THEME_ICONS = {
+    auto: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg>',
+    light: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    dark: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>'
+  };
+  const THEME_NAMES = { auto: 'Otomatik', light: 'Açık', dark: 'Koyu' };
+  let themePref = 'auto';
+  try { themePref = localStorage.getItem('zilTheme') || 'auto'; } catch (e) {}
+  const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  function applyTheme() {
+    const dark = themePref === 'dark' || (themePref === 'auto' && darkQuery.matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const b = $('themeBtn');
+    b.innerHTML = THEME_ICONS[themePref];
+    b.title = 'Panel teması: ' + THEME_NAMES[themePref];
+    b.setAttribute('aria-label', b.title);
+  }
+  $('themeBtn').onclick = () => {
+    themePref = { auto: 'light', light: 'dark', dark: 'auto' }[themePref];
+    try { localStorage.setItem('zilTheme', themePref); } catch (e) {}
+    applyTheme();
+  };
+  darkQuery.addEventListener('change', applyTheme);
+  applyTheme();
+
   let pin = '';
   try { pin = localStorage.getItem('zilPin') || ''; } catch (e) {}
   let state = null;
@@ -420,6 +446,8 @@
 
   // ---------- Pano ----------
   function fillBoard() {
+    fillDisplay();
+    renderMedia();
     const b = config.board;
     $('bAnn').value = (b.announcements || []).join('\n');
     $('bDuty').value = (b.duty || []).map((d) => d.place + ': ' + d.name).join('\n');
@@ -435,6 +463,141 @@
     const r = await api('PUT', '/board', { announcements: lines('bAnn'), duty, menu: lines('bMenu'), ticker: $('bTicker').value.trim() });
     flash('boardMsg', r.ok ? 'Panoda yayında' : r.error, !r.ok);
   };
+
+
+  // ---------- TV görünümü ----------
+  const ACCENTS = ['#F2A93B', '#4FC3A1', '#6CA8FF', '#FF7A59', '#C084FC', '#E30A17'];
+  function fillDisplay() {
+    const d = config.display;
+    document.querySelectorAll('#tvTheme .pill').forEach((b) => {
+      b.classList.toggle('on', b.dataset.theme === d.theme);
+      b.setAttribute('aria-pressed', b.dataset.theme === d.theme);
+    });
+    document.querySelectorAll('#tvLayout .layout-opt').forEach((b) => {
+      b.classList.toggle('on', b.dataset.layout === d.layout);
+      b.setAttribute('aria-pressed', b.dataset.layout === d.layout);
+    });
+    const sw = $('tvAccent');
+    sw.innerHTML = '';
+    for (const c of ACCENTS) {
+      const b = el('button', 'swatch' + (c.toLowerCase() === (d.accent || '').toLowerCase() ? ' on' : ''));
+      b.style.background = c;
+      b.setAttribute('aria-label', 'Vurgu rengi ' + c);
+      b.onclick = () => saveDisplay({ accent: c });
+      sw.appendChild(b);
+    }
+    const custom = el('input');
+    custom.type = 'color';
+    custom.value = d.accent || '#F2A93B';
+    custom.setAttribute('aria-label', 'Özel renk');
+    custom.onchange = () => saveDisplay({ accent: custom.value });
+    sw.appendChild(custom);
+    $('tvDuty').checked = d.showDuty !== false;
+    $('tvMenu').checked = d.showMenu !== false;
+    $('tvBreaks').checked = !!d.mediaOnlyBreaks;
+  }
+  async function saveDisplay(patch) {
+    Object.assign(config.display, patch);
+    fillDisplay();
+    const r = await api('PUT', '/display', patch);
+    if (!r.ok) flash('mediaMsg', r.error || 'Kaydedilemedi', true);
+  }
+  document.querySelectorAll('#tvTheme .pill').forEach((b) => { b.onclick = () => saveDisplay({ theme: b.dataset.theme }); });
+  document.querySelectorAll('#tvLayout .layout-opt').forEach((b) => { b.onclick = () => saveDisplay({ layout: b.dataset.layout }); });
+  $('tvDuty').onchange = () => saveDisplay({ showDuty: $('tvDuty').checked });
+  $('tvMenu').onchange = () => saveDisplay({ showMenu: $('tvMenu').checked });
+  $('tvBreaks').onchange = () => saveDisplay({ mediaOnlyBreaks: $('tvBreaks').checked });
+
+  // ---------- Medya ----------
+  function renderMedia() {
+    const box = $('mediaList');
+    box.innerHTML = '';
+    const list = config.media || [];
+    if (!list.length) { box.appendChild(el('p', 'm-meta', 'Henüz medya eklenmedi.')); return; }
+    list.forEach((m, i) => {
+      const row = el('div', 'media-item' + (m.enabled === false ? ' off' : ''));
+      let thumb;
+      if (m.type === 'image') { thumb = el('img', 'm-thumb'); thumb.alt = ''; thumb.src = '/media/' + encodeURIComponent(m.file); }
+      else { thumb = el('video', 'm-thumb'); thumb.muted = true; thumb.preload = 'metadata'; thumb.src = '/media/' + encodeURIComponent(m.file) + '#t=1'; }
+      const body = el('div', 'm-body');
+      body.append(el('div', 'm-title', m.name), el('div', 'm-meta', (m.type === 'image' ? 'Resim / afiş' : 'Video') + ' · ' + (i + 1) + '. sırada'));
+      const ctrl = el('div', 'm-ctrl');
+      if (m.type === 'image') {
+        const dur = el('input'); dur.type = 'number'; dur.min = 3; dur.max = 600; dur.value = m.duration || 10;
+        dur.setAttribute('aria-label', m.name + ' gösterim süresi (sn)');
+        dur.onchange = () => { m.duration = Math.max(3, Math.min(600, Number(dur.value) || 10)); saveMedia(); };
+        ctrl.append(dur, el('span', 'm-meta', 'sn'));
+      } else {
+        const sl = el('label', 'check'); const s = el('input'); s.type = 'checkbox'; s.checked = !!m.sound;
+        s.onchange = () => { m.sound = s.checked; saveMedia(); };
+        sl.append(s, document.createTextNode('Sesli'));
+        ctrl.append(sl);
+      }
+      const onl = el('label', 'check'); const on = el('input'); on.type = 'checkbox'; on.checked = m.enabled !== false;
+      on.onchange = () => { m.enabled = on.checked; saveMedia(); renderMedia(); };
+      onl.append(on, document.createTextNode('Yayında'));
+      const up = el('button', 'btn small', '↑'); up.setAttribute('aria-label', 'Yukarı taşı'); up.disabled = i === 0;
+      up.onclick = () => { list.splice(i - 1, 0, list.splice(i, 1)[0]); saveMedia(); renderMedia(); };
+      const down = el('button', 'btn small', '↓'); down.setAttribute('aria-label', 'Aşağı taşı'); down.disabled = i === list.length - 1;
+      down.onclick = () => { list.splice(i + 1, 0, list.splice(i, 1)[0]); saveMedia(); renderMedia(); };
+      const del = el('button', 'btn small', 'Sil');
+      del.onclick = async () => {
+        if (!confirm(m.name + ' silinsin mi?')) return;
+        await api('DELETE', '/media/' + m.id);
+        await loadConfig();
+      };
+      ctrl.append(onl, up, down, del);
+      body.append(ctrl);
+      row.append(thumb, body);
+      box.appendChild(row);
+    });
+  }
+  async function saveMedia() {
+    const items = config.media.map((m) => ({ id: m.id, duration: m.duration, sound: !!m.sound, enabled: m.enabled !== false }));
+    const r = await api('PUT', '/media', { items });
+    flash('mediaMsg', r.ok ? 'Kaydedildi' : r.error, !r.ok);
+  }
+
+  function uploadOne(file, i, total) {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/media/upload?name=' + encodeURIComponent(file.name));
+      xhr.setRequestHeader('x-pin', pin);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) return;
+        $('upBar').style.width = Math.round((e.loaded / e.total) * 100) + '%';
+        $('upText').textContent = (total > 1 ? (i + 1) + '/' + total + ' · ' : '') + file.name + ' · %' + Math.round((e.loaded / e.total) * 100);
+      };
+      xhr.onload = () => {
+        let r = {};
+        try { r = JSON.parse(xhr.responseText); } catch (e) {}
+        resolve(r.ok ? null : (r.error || 'Yüklenemedi') + ': ' + file.name);
+      };
+      xhr.onerror = () => resolve('Bağlantı hatası: ' + file.name);
+      xhr.send(file);
+    });
+  }
+  async function uploadFiles(files) {
+    files = [...files];
+    if (!files.length) return;
+    $('upProgressWrap').classList.remove('hidden');
+    const errors = [];
+    for (let i = 0; i < files.length; i++) {
+      $('upBar').style.width = '0';
+      const err = await uploadOne(files[i], i, files.length);
+      if (err) errors.push(err);
+    }
+    $('upProgressWrap').classList.add('hidden');
+    $('fileInput').value = '';
+    flash('mediaMsg', errors.length ? errors.join(' · ') : 'Yüklendi', !!errors.length);
+    await loadConfig();
+  }
+  $('fileInput').onchange = () => uploadFiles($('fileInput').files);
+  const dz = $('dropZone');
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('drag'); uploadFiles(e.dataTransfer.files); });
 
   // ---------- Ayarlar ----------
   let days = [];

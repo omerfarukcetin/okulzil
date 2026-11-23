@@ -24,7 +24,10 @@
   <header class="head">
     <div class="head-row">
       <div id="hSchool" class="h-title"></div>
-      <div id="hConn" class="h-conn">Bağlanıyor…</div>
+      <div class="h-right">
+        <div id="hConn" class="h-conn">Bağlanıyor…</div>
+        <button id="themeBtn" class="theme-btn" aria-label="Panel teması" title="Panel teması"></button>
+      </div>
     </div>
     <div class="stats">
       <div class="stat"><div class="k">Sonraki zil</div><div id="hNext" class="v big">—</div></div>
@@ -128,8 +131,46 @@
       <button id="addCer" class="btn dashed">+ Yeni tören ekle</button>
     </section>
 
-    <!-- PANO -->
+    <!-- EKRAN (TV) -->
     <section id="tab-board" class="tab">
+     <div class="cols">
+      <div class="col-a">
+      <h2>TV görünümü</h2>
+      <div class="card">
+        <div class="k">Tema</div>
+        <div class="pills" id="tvTheme">
+          <button class="pill" data-theme="dark">Koyu</button>
+          <button class="pill" data-theme="light">Açık</button>
+        </div>
+        <div class="k">Düzen</div>
+        <div class="layouts" id="tvLayout">
+          <button class="layout-opt" data-layout="classic"><span class="thumb"><i style="left:6%;top:12%;width:42%;height:34%"></i><i class="a" style="left:6%;top:52%;width:42%;height:20%"></i><i style="left:52%;top:12%;width:42%;height:30%"></i><i style="left:52%;top:48%;width:20%;height:24%"></i><i style="left:74%;top:48%;width:20%;height:24%"></i></span>Klasik</button>
+          <button class="layout-opt" data-layout="media"><span class="thumb"><i class="m" style="left:6%;top:12%;width:60%;height:60%"></i><i style="left:6%;top:78%;width:60%;height:10%"></i><i style="left:70%;top:12%;width:24%;height:22%"></i><i class="a" style="left:70%;top:38%;width:24%;height:14%"></i><i style="left:70%;top:56%;width:24%;height:32%"></i></span>Medya + bilgi</button>
+          <button class="layout-opt" data-layout="fullmedia"><span class="thumb"><i class="m" style="left:0;top:0;width:100%;height:100%"></i><i style="left:5%;top:78%;width:20%;height:14%"></i><i style="left:28%;top:78%;width:44%;height:14%"></i><i class="a" style="left:75%;top:78%;width:20%;height:14%"></i></span>Tam ekran medya</button>
+        </div>
+        <div class="k">Vurgu rengi</div>
+        <div class="swatches" id="tvAccent"></div>
+        <label class="check"><input id="tvDuty" type="checkbox"> Nöbetçileri göster</label>
+        <label class="check"><input id="tvMenu" type="checkbox"> Yemek menüsünü göster</label>
+        <label class="check"><input id="tvBreaks" type="checkbox"> Medyayı sadece teneffüs ve ders dışında göster</label>
+        <p class="hint" style="margin:8px 0 0">Medya eklenmediyse TV her zaman Klasik düzende görünür.</p>
+      </div>
+
+      <h2>Medya (video, resim, afiş)</h2>
+      <div class="card">
+        <div id="dropZone" class="upload">
+          Dosyaları buraya sürükleyin ya da seçin<br>JPG, PNG, WEBP, GIF, MP4, WEBM
+          <div><label for="fileInput" class="btn primary" style="display:inline-flex;align-items:center;margin:10px 0 0;color:var(--on-primary)">Dosya seç</label></div>
+          <input id="fileInput" type="file" multiple accept="image/*,video/mp4,video/webm" class="hidden">
+          <div id="upProgressWrap" class="hidden"><div id="upText" class="m-meta" style="margin-top:10px"></div><div class="progress"><div id="upBar"></div></div></div>
+        </div>
+        <div id="mediaList" style="margin-top:12px"></div>
+        <p id="mediaMsg" class="msg"></p>
+      </div>
+      </div>
+
+      <div class="col-b">
+      <h2>Duyurular ve bilgiler</h2>
       <div class="card">
         <label for="bAnn">Duyurular (her satır bir duyuru)</label>
         <textarea id="bAnn" rows="4"></textarea>
@@ -142,6 +183,8 @@
         <button id="saveBoard" class="btn primary">Panoya gönder</button>
         <p id="boardMsg" class="msg"></p>
       </div>
+      </div>
+     </div>
     </section>
 
     <!-- AYARLAR -->
@@ -182,7 +225,7 @@
     <button data-tab="home" class="on">Ana sayfa</button>
     <button data-tab="bell">Zil</button>
     <button data-tab="cer">Törenler</button>
-    <button data-tab="board">Pano</button>
+    <button data-tab="board">Ekran</button>
     <button data-tab="set">Ayarlar</button>
   </nav>
 </div>

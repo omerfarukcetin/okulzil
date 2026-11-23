@@ -6,43 +6,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="pano.css">
 </head>
-<body>
+<body data-theme="dark">
 <div id="stage">
 
-  <!-- NORMAL PANO -->
-  <section id="scr-normal" class="screen active">
+  <!-- DÜZEN 1: KLASİK -->
+  <section id="scr-classic" class="screen info active">
     <header class="top">
-      <div class="brand"><div class="logo">LOGO</div><div id="schoolName" class="school"></div></div>
-      <div id="dateText" class="date"></div>
+      <div class="brand"><div class="logo">LOGO</div><div class="school js-school"></div></div>
+      <div class="date js-date"></div>
     </header>
     <div class="grid2">
       <div class="col">
         <div class="card clock-card">
-          <div id="clock" class="clock">--:--</div>
-          <div id="period" class="sub"></div>
+          <div class="clock js-clock">--:--</div>
+          <div class="sub js-period"></div>
         </div>
-        <div id="countCard" class="count-card">
-          <div><div id="countTitle" class="count-title"></div><div id="countSub" class="count-sub"></div></div>
-          <div id="countValue" class="count-value"></div>
+        <div class="count-card js-count-card">
+          <div><div class="count-title js-count-title"></div><div class="count-sub js-count-sub"></div></div>
+          <div class="count-value js-count-value"></div>
         </div>
         <div class="chips">
-          <div class="chip">Bugünkü program: <b id="progName"></b></div>
-          <div class="chip">Son ders bitişi: <b id="lastEnd"></b></div>
+          <div class="chip">Bugünkü program: <b class="js-prog"></b></div>
+          <div class="chip">Son ders bitişi: <b class="js-last"></b></div>
         </div>
       </div>
       <div class="col">
         <div class="card">
           <div class="label">DUYURULAR</div>
-          <div id="annMain" class="ann-main"></div>
-          <div id="annNext" class="ann-next"></div>
+          <div class="ann-main js-ann-main"></div>
+          <div class="ann-next js-ann-next"></div>
         </div>
-        <div class="grid2 inner">
-          <div class="card"><div class="label">NÖBETÇİLER</div><div id="duty" class="list"></div></div>
-          <div class="card"><div class="label">GÜNÜN MENÜSÜ</div><div id="menu" class="list"></div></div>
+        <div class="grid2 inner js-extras">
+          <div class="card js-duty-card"><div class="label">NÖBETÇİLER</div><div class="list js-duty"></div></div>
+          <div class="card js-menu-card"><div class="label">GÜNÜN MENÜSÜ</div><div class="list js-menu"></div></div>
         </div>
       </div>
     </div>
-    <footer class="ticker"><div class="ticker-tag">DUYURU</div><div class="ticker-track"><span id="ticker"></span></div></footer>
+    <footer class="ticker"><div class="ticker-tag">DUYURU</div><div class="ticker-track"><span class="js-ticker"></span></div></footer>
+  </section>
+
+  <!-- DÜZEN 2: MEDYA + BİLGİ -->
+  <section id="scr-media" class="screen info">
+    <header class="top">
+      <div class="brand"><div class="logo">LOGO</div><div class="school js-school"></div></div>
+      <div class="date js-date"></div>
+    </header>
+    <div class="m-grid">
+      <div class="m-left">
+        <div class="media-box"><div class="media-empty">Medya eklenmedi</div></div>
+        <div class="m-strip js-extras">
+          <div class="strip js-duty-card"><span class="label">NÖBETÇİ</span><span class="js-duty-line"></span></div>
+          <div class="strip js-menu-card"><span class="label">MENÜ</span><span class="js-menu-line"></span></div>
+        </div>
+      </div>
+      <div class="m-right">
+        <div class="card clock-card small">
+          <div class="clock js-clock">--:--</div>
+          <div class="sub js-period"></div>
+        </div>
+        <div class="count-card small js-count-card">
+          <div><div class="count-title js-count-title"></div><div class="count-sub js-count-sub"></div></div>
+          <div class="count-value js-count-value"></div>
+        </div>
+        <div class="card grow">
+          <div class="label">DUYURULAR</div>
+          <div class="ann-main js-ann-main"></div>
+          <div class="ann-next js-ann-next"></div>
+        </div>
+      </div>
+    </div>
+    <footer class="ticker"><div class="ticker-tag">DUYURU</div><div class="ticker-track"><span class="js-ticker"></span></div></footer>
+  </section>
+
+  <!-- DÜZEN 3: TAM EKRAN MEDYA -->
+  <section id="scr-fullmedia" class="screen info full">
+    <div class="media-box"><div class="media-empty">Medya eklenmedi</div></div>
+    <div class="f-bar">
+      <div class="f-clock"><div class="clock js-clock">--:--</div><div class="sub js-period"></div></div>
+      <div class="f-ann"><div class="label">DUYURU</div><div class="js-ann-main"></div></div>
+      <div class="f-count js-count-card"><div class="count-title js-count-title"></div><div class="count-value js-count-value"></div></div>
+    </div>
   </section>
 
   <!-- İSTİKLAL MARŞI -->
@@ -85,7 +128,7 @@
     <div class="alarm-foot"><div id="alarmFoot"></div><div id="alarmArea" class="area"></div></div>
   </section>
 
-  <!-- ANONS / ZİL BİLDİRİMİ -->
+  <!-- ANONS / BİLDİRİM -->
   <div id="overlay" class="overlay"><div id="overlayText"></div></div>
 </div>
 

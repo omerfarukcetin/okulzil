@@ -21,9 +21,6 @@
   addEventListener('resize', fit);
   fit();
 
-  function show(name) {
-    document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === 'scr-' + name));
-  }
 
   // ---------- Ses ----------
   const AC = new (window.AudioContext || window.webkitAudioContext)();
@@ -207,49 +204,71 @@
     for (const a of [...active]) if (a.el && a.el.volume < 1) a.stop();
   }
 
-  // ---------- Normal pano ----------
+  // ---------- Bilgi ekranları (3 düzen ortak) ----------
   const DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
   const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
   let annIndex = 0;
+  const all = (cls) => document.querySelectorAll('.' + cls);
+  const setText = (cls, text) => all(cls).forEach((e) => { if (e.textContent !== text) e.textContent = text; });
 
-  function setList(el, items, empty) {
-    el.innerHTML = '';
-    if (!items.length) {
-      const d = document.createElement('div');
-      d.className = 'muted';
-      d.textContent = empty;
-      el.appendChild(d);
-      return;
-    }
-    for (const t of items) {
-      const d = document.createElement('div');
-      d.textContent = t;
-      el.appendChild(d);
-    }
+  function setList(cls, items, empty) {
+    all(cls).forEach((el) => {
+      el.innerHTML = '';
+      const rows = items.length ? items : [empty];
+      for (const t of rows) {
+        const d = document.createElement('div');
+        if (!items.length) d.className = 'muted';
+        d.textContent = t;
+        el.appendChild(d);
+      }
+    });
+  }
+
+  // Açık renkli vurguda koyu yazı, koyu vurguda beyaz yazı
+  function onAccent(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.35 ? '#0E1A2B' : '#FFFFFF';
+  }
+
+  function applyDisplay() {
+    const d = state.display || {};
+    document.body.dataset.theme = d.theme === 'light' ? 'light' : 'dark';
+    const accent = /^#[0-9a-fA-F]{6}$/.test(d.accent || '') ? d.accent : '#F2A93B';
+    document.body.style.setProperty('--accent', accent);
+    document.body.style.setProperty('--on-accent', onAccent(accent));
+    all('js-duty-card').forEach((e) => e.classList.toggle('hide', d.showDuty === false));
+    all('js-menu-card').forEach((e) => e.classList.toggle('hide', d.showMenu === false));
+    all('js-extras').forEach((e) => e.classList.toggle('hide', d.showDuty === false && d.showMenu === false));
   }
 
   function renderBoard() {
     if (!state) return;
-    $('schoolName').textContent = state.schoolName;
+    applyDisplay();
+    setText('js-school', state.schoolName);
     const b = state.board || {};
-    setList($('duty'), (b.duty || []).map((d) => d.place + ': ' + d.name), 'Henüz girilmedi');
-    setList($('menu'), b.menu || [], 'Henüz girilmedi');
-    $('ticker').textContent = b.ticker || state.schoolName;
+    const duty = (b.duty || []).map((d) => d.place + (d.name ? ': ' + d.name : ''));
+    setList('js-duty', duty, 'Henüz girilmedi');
+    setList('js-menu', b.menu || [], 'Henüz girilmedi');
+    setText('js-duty-line', duty.join(' · ') || 'Henüz girilmedi');
+    setText('js-menu-line', (b.menu || []).join(' · ') || 'Henüz girilmedi');
+    setText('js-ticker', b.ticker || state.schoolName);
     renderAnnouncements();
     const day = state.day;
-    $('progName').textContent = day.schoolDay ? day.programName : day.reason;
-    $('lastEnd').textContent = day.lessons.length ? day.lessons[day.lessons.length - 1].end : '—';
+    setText('js-prog', day.schoolDay ? day.programName : day.reason);
+    setText('js-last', day.lessons.length ? day.lessons[day.lessons.length - 1].end : '—');
+    updateLayout();
   }
 
   function renderAnnouncements() {
     const list = (state && state.board.announcements) || [];
-    if (!list.length) { $('annMain').textContent = 'Duyuru yok'; $('annNext').textContent = ''; return; }
+    if (!list.length) { setText('js-ann-main', 'Duyuru yok'); setText('js-ann-next', ''); return; }
     annIndex = annIndex % list.length;
-    $('annMain').textContent = list[annIndex];
-    $('annNext').textContent = list.length > 1 ? list[(annIndex + 1) % list.length] : '';
+    setText('js-ann-main', list[annIndex]);
+    setText('js-ann-next', list.length > 1 ? list[(annIndex + 1) % list.length] : '');
   }
   setInterval(() => { annIndex++; renderAnnouncements(); }, 10000);
-  setInterval(() => $('scr-normal').classList.toggle('shift'), 5 * 60 * 1000);
+  setInterval(() => document.querySelectorAll('.screen.info').forEach((s) => s.classList.toggle('shift')), 5 * 60 * 1000);
 
   function fmtLeft(sec) {
     if (sec < 60) return sec + ' sn';
@@ -258,44 +277,133 @@
     return Math.floor(m / 60) + ' sa ' + (m % 60) + ' dk';
   }
 
+  let inLesson = false;
   function tickClock() {
     const d = now();
-    $('clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
-    $('dateText').textContent = d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + DAYS[d.getDay()];
+    setText('js-clock', pad(d.getHours()) + ':' + pad(d.getMinutes()));
+    setText('js-date', d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + DAYS[d.getDay()]);
     if (!state) return;
     const day = state.day;
     const cur = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
     const L = day.lessons;
-    const card = $('countCard');
-    const set = (title, sub, val, idle) => {
-      $('countTitle').textContent = title;
-      $('countSub').textContent = sub;
-      $('countValue').textContent = val;
-      card.classList.toggle('idle', !!idle);
+    const set = (period, title, sub, val, idle, lesson) => {
+      inLesson = !!lesson;
+      setText('js-period', period);
+      setText('js-count-title', title);
+      setText('js-count-sub', sub);
+      setText('js-count-value', val);
+      all('js-count-card').forEach((c) => c.classList.toggle('idle', !!idle));
+      updateLayout();
     };
-    if (!day.schoolDay) {
-      $('period').textContent = day.reason || 'Bugün ders yok';
-      return set('Bugün ders yok', day.reason || '', '', true);
-    }
-    if (!L.length) { $('period').textContent = ''; return set('Ders programı boş', '', '', true); }
+    if (!day.schoolDay) return set(day.reason || 'Bugün ders yok', 'Bugün ders yok', day.reason || '', '', true);
+    if (!L.length) return set('', 'Ders programı boş', '', '', true);
     const secTo = (t) => Math.max(0, Math.round((toMin(t) - cur) * 60));
     for (let i = 0; i < L.length; i++) {
       const s = toMin(L[i].start), e = toMin(L[i].end);
       if (cur < s) {
         const gap = i === 0 ? null : s - toMin(L[i - 1].end);
-        $('period').textContent = i === 0 ? 'Dersler ' + L[0].start + '\'de başlıyor' : gap >= 30 ? 'Öğle arası' : 'Teneffüs';
-        return set(i === 0 ? 'İlk derse kalan' : 'Derse kalan', (i + 1) + '. ders ' + L[i].start + ' – ' + L[i].end, fmtLeft(secTo(L[i].start)));
+        const period = i === 0 ? 'Dersler ' + L[0].start + '\'de başlıyor' : gap >= 30 ? 'Öğle arası' : 'Teneffüs';
+        return set(period, i === 0 ? 'İlk derse kalan' : 'Derse kalan', (i + 1) + '. ders ' + L[i].start + ' – ' + L[i].end, fmtLeft(secTo(L[i].start)));
       }
       if (cur < e) {
-        $('period').textContent = (i + 1) + '. ders · ' + L[i].start + ' – ' + L[i].end;
         const last = i === L.length - 1;
-        return set(last ? 'Dersler bitimine kalan' : 'Teneffüse kalan', 'Çıkış zili ' + L[i].end, fmtLeft(secTo(L[i].end)));
+        return set((i + 1) + '. ders · ' + L[i].start + ' – ' + L[i].end, last ? 'Dersler bitimine kalan' : 'Teneffüse kalan', 'Çıkış zili ' + L[i].end, fmtLeft(secTo(L[i].end)), false, true);
       }
     }
-    $('period').textContent = 'Dersler bitti';
-    set('Bugünlük dersler bitti', 'İyi akşamlar', '', true);
+    set('Dersler bitti', 'Bugünlük dersler bitti', 'İyi akşamlar', '', true);
   }
   setInterval(tickClock, 1000);
+
+  // ---------- Düzen seçimi ----------
+  let screen = 'normal'; // normal | anthem | saygi | alarm
+  function currentLayout() {
+    if (!state) return 'classic';
+    const d = state.display || {};
+    const media = state.media || [];
+    if (!media.length || d.layout === 'classic') return 'classic';
+    if (d.mediaOnlyBreaks && inLesson) return 'classic';
+    return d.layout === 'fullmedia' ? 'fullmedia' : 'media';
+  }
+  function show(name) {
+    screen = name;
+    updateLayout();
+  }
+  let shownId = null;
+  function updateLayout() {
+    const layout = currentLayout();
+    const id = screen === 'normal' ? 'scr-' + layout : 'scr-' + screen;
+    if (id !== shownId) {
+      shownId = id;
+      document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
+    }
+    if (screen === 'normal' && layout !== 'classic') playerSet(document.querySelector('#' + id + ' .media-box'), state.media);
+    else playerStop();
+  }
+
+  // ---------- Medya oynatıcı ----------
+  const player = { box: null, key: '', list: [], idx: -1, el: null, timer: null };
+  const mediaKey = (list) => (list || []).map((m) => m.id + ':' + m.duration + ':' + m.sound).join('|');
+  function playerSet(box, list) {
+    const key = mediaKey(list);
+    if (box === player.box && key === player.key) return;
+    const keepIndex = box === player.box;
+    playerStop();
+    player.box = box;
+    player.key = key;
+    player.list = list || [];
+    if (!keepIndex) player.idx = -1;
+    if (box && player.list.length) playerNext();
+  }
+  function playerStop() {
+    clearTimeout(player.timer);
+    if (player.el) {
+      if (player.el.tagName === 'VIDEO') { player.el.pause(); player.el.removeAttribute('src'); player.el.load(); }
+      player.el.remove();
+      player.el = null;
+    }
+    player.box = null;
+    player.key = '';
+  }
+  function playerNext() {
+    clearTimeout(player.timer);
+    const list = player.list;
+    if (!player.box || !list.length) return;
+    player.idx = (player.idx + 1) % list.length;
+    const m = list[player.idx];
+    const src = '/media/' + encodeURIComponent(m.file);
+    const skip = () => { clearTimeout(player.timer); player.timer = setTimeout(playerNext, list.length > 1 ? 300 : 5000); };
+    let el;
+    if (m.type === 'image') {
+      el = new Image();
+      el.onerror = skip;
+      el.src = src;
+      player.timer = setTimeout(playerNext, (m.duration || 10) * 1000);
+    } else {
+      el = document.createElement('video');
+      el.muted = !(m.sound && AUDIO);
+      el.playsInline = true;
+      el.onended = playerNext;
+      el.onerror = skip;
+      el.src = src;
+      el.play().catch(() => { el.muted = true; el.play().catch(skip); });
+      player.timer = setTimeout(playerNext, 30 * 60 * 1000); // güvenlik: takılırsa geç
+    }
+    el.className = 'media-el';
+    const old = player.el;
+    player.box.appendChild(el);
+    player.el = el;
+    if (old) {
+      if (old.tagName === 'VIDEO') { old.pause(); old.removeAttribute('src'); old.load(); }
+      setTimeout(() => old.remove(), 600);
+    }
+  }
+  // Zil ya da anons sırasında sesli videoyu kısa süre sustur
+  function duckVideo(ms) {
+    const v = player.el;
+    if (!v || v.tagName !== 'VIDEO' || v.muted) return;
+    v.muted = true;
+    setTimeout(() => { if (player.el === v) v.muted = false; }, ms);
+  }
 
   // ---------- Overlay ----------
   let overlayTimer = null;
@@ -450,6 +558,7 @@
   // ---------- Anons ----------
   async function announce(text, repeat) {
     stopMusic();
+    duckVideo(20000 * repeat);
     overlay(text, 15000 * repeat);
     if (!AUDIO) return;
     for (let i = 0; i < repeat; i++) {
@@ -474,7 +583,7 @@
     if (c.action === 'bell') {
       if (!state || state.mode !== 'normal') return;
       stopMusic();
-      if (!c.silent) playOrSynth(state.sounds[c.bell], 'bell', 4);
+      if (!c.silent) { duckVideo(8000); playOrSynth(state.sounds[c.bell], 'bell', 4); }
     } else if (c.action === 'music') {
       c.on ? startMusic() : stopMusic();
     } else if (c.action === 'ceremony') {

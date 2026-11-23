@@ -57,6 +57,19 @@ Sesli anons Windows'un metin okuma sesini kullanır. Türkçe ses yoksa:
 - Bilgisayara sabit IP verin; telefon paneli adresi değişmesin.
 - Windows Güvenlik Duvarı ilk açılışta soracak: **Özel ağlarda izin ver**.
 
+## TV görünümü ve medya
+
+Panelde **Ekran** sekmesinden:
+- **Tema:** Koyu ya da Açık. Vurgu rengi hazır renklerden ya da özel renk ile seçilir.
+- **Düzen:** Klasik (saat, zil, duyurular), Medya + bilgi (büyük video/afiş alanı + saat, zil, duyurular), Tam ekran medya (alt şeritte saat, duyuru, zil).
+- **Medya:** JPG, PNG, WEBP, GIF, MP4, WEBM yüklenir (dosya başına en fazla 2 GB). Sıra, resim süresi, video sesi ve yayında olup olmadığı ayarlanır.
+- "Medyayı sadece teneffüs ve ders dışında göster" seçilirse ders sırasında Klasik düzene geçer.
+
+Videolar varsayılan olarak sessizdir (ses zil hoparlörlerinden çıkacağı için). Sesli işaretlenen video zil ve anons sırasında kısa süre susturulur.
+Medya dosyaları ayar klasöründeki `media/` klasöründe saklanır.
+
+Panelin kendi teması sağ üstteki düğmeyle değişir: Otomatik (cihaza göre) → Açık → Koyu.
+
 ## Öncelik sırası
 
 Acil durum alarmı > Tören > Zil. Alarm çalarken zil ve tören çalmaz; tören sürerken zil atlanır.
