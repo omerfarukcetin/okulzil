@@ -554,9 +554,35 @@
   document.querySelectorAll('#logoSize .pill').forEach((b) => { b.onclick = () => { saveDisplay({ logoSize: b.dataset.size }); fillLogo(); }; });
   $('logoBg').onchange = () => { saveDisplay({ logoBg: $('logoBg').checked }); fillLogo(); };
 
+  const STATUS_DEFAULTS = { enabled: true, bigCountdown: true, breakText: 'TENEFFÜS', lunchText: 'ÖĞLE ARASI', warnText: 'SINIFLARINIZA GEÇİN', warnMinutes: 2, breakColor: '#2E9E5B', lunchColor: '#E07B1A', warnColor: '#F2C230' };
+  const ST_FIELDS = { stBreakText: 'breakText', stLunchText: 'lunchText', stWarnText: 'warnText', stBreakColor: 'breakColor', stLunchColor: 'lunchColor', stWarnColor: 'warnColor', stWarnMin: 'warnMinutes' };
+  function fillStatus() {
+    const st = { ...STATUS_DEFAULTS, ...(config.display.status || {}) };
+    $('stEnabled').checked = !!st.enabled;
+    $('stBig').checked = !!st.bigCountdown;
+    for (const [id, k] of Object.entries(ST_FIELDS)) $(id).value = st[k];
+  }
+  function saveStatus(patch) {
+    config.display.status = { ...STATUS_DEFAULTS, ...(config.display.status || {}), ...patch };
+    api('PUT', '/display', { status: patch });
+  }
+  $('stEnabled').onchange = () => saveStatus({ enabled: $('stEnabled').checked });
+  $('stBig').onchange = () => saveStatus({ bigCountdown: $('stBig').checked });
+  for (const [id, k] of Object.entries(ST_FIELDS)) {
+    $(id).onchange = () => {
+      let v = $(id).value;
+      if (k === 'warnMinutes') v = Number(v) || 0;
+      else if (!k.endsWith('Color')) v = v.trim() || STATUS_DEFAULTS[k];
+      saveStatus({ [k]: v });
+      fillStatus();
+    };
+  }
+  $('stReset').onclick = () => { saveStatus({ ...STATUS_DEFAULTS }); fillStatus(); };
+
   function fillDisplay() {
     const d = config.display;
     fillLogo();
+    fillStatus();
     document.querySelectorAll('#tvTheme .theme-opt').forEach((b) => {
       b.classList.toggle('on', b.dataset.theme === d.theme);
       b.setAttribute('aria-pressed', b.dataset.theme === d.theme);

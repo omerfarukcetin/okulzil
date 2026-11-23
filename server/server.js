@@ -465,6 +465,14 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       for (const k of ['showDuty', 'showMenu', 'mediaOnlyBreaks']) if (typeof b[k] === 'boolean') d[k] = b[k];
       if (['normal', 'big'].includes(b.logoSize)) d.logoSize = b.logoSize;
       if (typeof b.logoBg === 'boolean') d.logoBg = b.logoBg;
+      if (b.status && typeof b.status === 'object') {
+        const st = { ...(d.status || {}) };
+        for (const k of ['enabled', 'bigCountdown']) if (typeof b.status[k] === 'boolean') st[k] = b.status[k];
+        for (const k of ['breakText', 'lunchText', 'warnText']) if (typeof b.status[k] === 'string') st[k] = b.status[k].trim().slice(0, 40);
+        for (const k of ['breakColor', 'lunchColor', 'warnColor']) if (/^#[0-9a-fA-F]{6}$/.test(b.status[k] || '')) st[k] = b.status[k];
+        if (b.status.warnMinutes != null) st.warnMinutes = Math.max(0, Math.min(10, Number(b.status.warnMinutes) || 0));
+        d.status = st;
+      }
     });
     pushState();
     res.json({ ok: true });

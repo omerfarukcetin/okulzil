@@ -186,6 +186,23 @@
         <p class="hint" style="margin:8px 0 0">Medya eklenmediyse TV her zaman Klasik düzende görünür.</p>
       </div>
 
+      <h2>Teneffüs görünümü</h2>
+      <div class="card">
+        <label class="check"><input id="stEnabled" type="checkbox"> Teneffüs ve öğle arasında ekranın rengi değişsin</label>
+        <label class="check"><input id="stBig" type="checkbox"> Teneffüste en büyük yazı "derse kalan süre" olsun</label>
+        <div class="status-grid">
+          <span class="k">Durum</span><span class="k">Ekrandaki yazı</span><span class="k">Renk</span>
+          <span>Teneffüs</span><input id="stBreakText" aria-label="Teneffüs yazısı"><input id="stBreakColor" type="color" aria-label="Teneffüs rengi">
+          <span>Öğle arası</span><input id="stLunchText" aria-label="Öğle arası yazısı"><input id="stLunchColor" type="color" aria-label="Öğle arası rengi">
+          <span>Uyarı</span><input id="stWarnText" aria-label="Uyarı yazısı"><input id="stWarnColor" type="color" aria-label="Uyarı rengi">
+        </div>
+        <div class="row">
+          <label for="stWarnMin" class="grow" style="margin:0">Uyarı, ders başlamadan kaç dakika önce çıksın (0 = kapalı)</label>
+          <input id="stWarnMin" type="number" min="0" max="10" class="narrow">
+        </div>
+        <button id="stReset" class="btn" style="margin-top:12px">Varsayılanlara dön</button>
+      </div>
+
       <h2>Medya (video, resim, afiş)</h2>
       <div class="card">
         <div id="dropZone" class="upload">

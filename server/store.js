@@ -22,6 +22,7 @@ function createStore(dataDir) {
     data.board = { ...defaults.board, ...(saved.board || {}) };
     data.emergency = { ...defaults.emergency, ...(saved.emergency || {}) };
     data.display = { ...defaults.display, ...(saved.display || {}) };
+    data.display.status = { ...defaults.display.status, ...((saved.display && saved.display.status) || {}) };
     if (!Array.isArray(data.media)) data.media = [];
     // Eski kayıtlar: törende ses başlatma ayarı yoksa ekle
     for (const c of data.ceremonies || []) {

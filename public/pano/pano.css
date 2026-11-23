@@ -162,3 +162,36 @@ body[data-theme="flag"] .label { color: #FFFFFF; }
 
 .audio-gate { position: fixed; right: 16px; bottom: 16px; background: #F2A93B; color: #0E1A2B; padding: 14px 18px; border-radius: 12px; font: 700 18px system-ui; display: none; }
 .audio-gate.show { display: block; }
+
+/* ---------- TENEFFÜS / ÖĞLE ARASI / UYARI ---------- */
+.band { display: none; align-items: center; gap: 20px; background: var(--phase); color: var(--on-phase); border-radius: 18px; padding: 0 28px; height: 76px; }
+.band .logo { height: 48px; }
+.band-text { font-size: 44px; font-weight: 800; letter-spacing: 3px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.band-right { text-align: right; }
+.band-left { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.band-sub { font-size: 16px; font-weight: 600; opacity: .9; }
+body.phase-on .info .top { display: none; }
+body.phase-on .info .band { display: flex; }
+body.phase-on #scr-classic { gap: 24px; padding-top: 32px; }
+body.phase-on #scr-media { padding-top: 24px; }
+body.phase-on .count-card:not(.idle) { background: var(--phase); color: var(--on-phase); }
+body.phase-warn .band-text { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+/* Teneffüste büyük geri sayım: saat kartı geri sayımı, geri sayım kartı saati gösterir */
+body.big-count .clock-card { background: var(--phase); color: var(--on-phase); }
+body.big-count .clock-card .sub { color: var(--on-phase); opacity: .9; }
+body.big-count .count-card:not(.idle) { background: var(--card); color: var(--text); }
+body.big-count #scr-classic .clock-card { padding: 36px 40px; flex: 1; justify-content: center; }
+body.big-count #scr-classic .clock { font-size: 180px; letter-spacing: -4px; }
+body.big-count #scr-classic .clock-card .sub { font-size: 28px; }
+body.big-count #scr-classic .col { gap: 20px; }
+body.big-count .band-right { display: none; }
+
+/* Tam ekran medya: duyuru yerine renkli durum şeridi */
+.f-bar > .f-status { display: none; background: var(--phase); color: var(--on-phase); align-items: center; gap: 16px; font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.f-status .band-text { font-size: 28px; flex: 0 1 auto; }
+body.phase-on .f-bar > .f-ann { display: none; }
+body.phase-on .f-bar > .f-status { display: flex; }
+body.big-count .f-bar > .f-clock { background: var(--phase); color: var(--on-phase); }
+body.big-count .f-bar > .f-clock .sub { color: var(--on-phase); }

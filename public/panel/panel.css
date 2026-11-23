@@ -145,6 +145,10 @@ main { padding: 0 16px; }
 .logo-prev.bg img { background: #fff; padding: 6px; border-radius: 8px; }
 .h-logo { height: 36px; width: auto; max-width: 120px; object-fit: contain; }
 
+.status-grid { display: grid; grid-template-columns: 86px minmax(0, 1fr) 56px; gap: 8px; align-items: center; margin-top: 12px; }
+.status-grid .k { margin: 0; font-size: 12px; }
+.status-grid input[type="color"] { width: 56px; height: 44px; }
+
 /* Medya listesi */
 .upload { border: 1.5px dashed var(--muted); border-radius: 14px; padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
 .upload.drag { background: var(--surface2); }

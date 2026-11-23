@@ -290,39 +290,95 @@
   }
 
   let inLesson = false;
+  const STATUS_DEFAULTS = { enabled: true, bigCountdown: true, breakText: 'TENEFFÜS', lunchText: 'ÖĞLE ARASI', warnText: 'SINIFLARINIZA GEÇİN', warnMinutes: 2, breakColor: '#2E9E5B', lunchColor: '#E07B1A', warnColor: '#F2C230' };
+  let lastPhase = '';
+
+  // Teneffüs / öğle arası / uyarı durumunu ekrana uygular
+  function applyPhase(phase, info) {
+    const st = { ...STATUS_DEFAULTS, ...((state && state.display && state.display.status) || {}) };
+    const active = st.enabled && phase !== 'none';
+    const color = phase === 'warn' ? st.warnColor : phase === 'lunch' ? st.lunchColor : st.breakColor;
+    const text = phase === 'warn' ? st.warnText : phase === 'lunch' ? st.lunchText : st.breakText;
+    const key = active + phase + color + text;
+    if (key !== lastPhase) {
+      lastPhase = key;
+      document.body.classList.toggle('phase-on', active);
+      document.body.classList.toggle('phase-warn', active && phase === 'warn');
+      if (active) {
+        document.body.style.setProperty('--phase', color);
+        document.body.style.setProperty('--on-phase', onAccent(color));
+      }
+      setText('js-band-text', text);
+    }
+    if (active) {
+      setText('js-band-sub', info.nextLabel);
+      setText('js-band-left', info.left);
+    }
+    return active && st.bigCountdown;
+  }
+
   function tickClock() {
     const d = now();
-    setText('js-clock', pad(d.getHours()) + ':' + pad(d.getMinutes()));
+    const clock = pad(d.getHours()) + ':' + pad(d.getMinutes());
     setText('js-date', d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + DAYS[d.getDay()]);
-    if (!state) return;
+    if (!state) { setText('js-clock', clock); return; }
     const day = state.day;
     const cur = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
     const L = day.lessons;
-    const set = (period, title, sub, val, idle, lesson) => {
-      inLesson = !!lesson;
-      setText('js-period', period);
-      setText('js-count-title', title);
-      setText('js-count-sub', sub);
-      setText('js-count-value', val);
-      all('js-count-card').forEach((c) => c.classList.toggle('idle', !!idle));
+    const set = (o) => {
+      inLesson = !!o.lesson;
+      const big = applyPhase(o.phase || 'none', o);
+      if (big) {
+        // Teneffüste en büyük yazı: derse kalan süre. Saat geri sayım kartına geçer.
+        setText('js-clock', o.left);
+        setText('js-period', o.title + ' · ' + o.nextLabel);
+        setText('js-count-title', 'Saat');
+        setText('js-count-sub', o.period);
+        setText('js-count-value', clock);
+        document.body.classList.add('big-count');
+      } else {
+        setText('js-clock', clock);
+        setText('js-period', o.period);
+        setText('js-count-title', o.title);
+        setText('js-count-sub', o.sub);
+        setText('js-count-value', o.left || '');
+        document.body.classList.remove('big-count');
+      }
+      all('js-count-card').forEach((c) => c.classList.toggle('idle', !!o.idle));
       updateLayout();
     };
-    if (!day.schoolDay) return set(day.reason || 'Bugün ders yok', 'Bugün ders yok', day.reason || '', '', true);
-    if (!L.length) return set('', 'Ders programı boş', '', '', true);
+    if (!day.schoolDay) return set({ period: day.reason || 'Bugün ders yok', title: 'Bugün ders yok', sub: day.reason || '', idle: true });
+    if (!L.length) return set({ period: '', title: 'Ders programı boş', sub: '', idle: true });
     const secTo = (t) => Math.max(0, Math.round((toMin(t) - cur) * 60));
+    const st = { ...STATUS_DEFAULTS, ...((state.display && state.display.status) || {}) };
     for (let i = 0; i < L.length; i++) {
       const s = toMin(L[i].start), e = toMin(L[i].end);
       if (cur < s) {
-        const gap = i === 0 ? null : s - toMin(L[i - 1].end);
-        const period = i === 0 ? 'Dersler ' + L[0].start + '\'de başlıyor' : gap >= 30 ? 'Öğle arası' : 'Teneffüs';
-        return set(period, i === 0 ? 'İlk derse kalan' : 'Derse kalan', (i + 1) + '. ders ' + L[i].start + ' – ' + L[i].end, fmtLeft(secTo(L[i].start)));
+        const first = i === 0;
+        const gap = first ? null : s - toMin(L[i - 1].end);
+        const warn = s - cur <= (Number(st.warnMinutes) || 0);
+        const phase = warn ? 'warn' : first ? 'none' : gap >= 30 ? 'lunch' : 'break';
+        const period = first ? 'Dersler ' + L[0].start + '\'de başlıyor' : gap >= 30 ? 'Öğle arası' : 'Teneffüs';
+        return set({
+          phase, period,
+          title: first ? 'İlk derse kalan' : 'Derse kalan',
+          sub: (i + 1) + '. ders ' + L[i].start + ' – ' + L[i].end,
+          nextLabel: (i + 1) + '. ders ' + L[i].start + '\'de',
+          left: fmtLeft(secTo(L[i].start))
+        });
       }
       if (cur < e) {
         const last = i === L.length - 1;
-        return set((i + 1) + '. ders · ' + L[i].start + ' – ' + L[i].end, last ? 'Dersler bitimine kalan' : 'Teneffüse kalan', 'Çıkış zili ' + L[i].end, fmtLeft(secTo(L[i].end)), false, true);
+        return set({
+          lesson: true, phase: 'none',
+          period: (i + 1) + '. ders · ' + L[i].start + ' – ' + L[i].end,
+          title: last ? 'Dersler bitimine kalan' : 'Teneffüse kalan',
+          sub: 'Çıkış zili ' + L[i].end,
+          left: fmtLeft(secTo(L[i].end))
+        });
       }
     }
-    set('Dersler bitti', 'Bugünlük dersler bitti', 'İyi akşamlar', '', true);
+    set({ period: 'Dersler bitti', title: 'Bugünlük dersler bitti', sub: 'İyi akşamlar', idle: true });
   }
   setInterval(tickClock, 1000);
 

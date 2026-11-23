@@ -294,7 +294,18 @@
     "mediaOnlyBreaks": false,
     "logo": null,
     "logoSize": "normal",
-    "logoBg": false
+    "logoBg": false,
+    "status": {
+      "enabled": true,
+      "bigCountdown": true,
+      "breakText": "TENEFFÜS",
+      "lunchText": "ÖĞLE ARASI",
+      "warnText": "SINIFLARINIZA GEÇİN",
+      "warnMinutes": 2,
+      "breakColor": "#2E9E5B",
+      "lunchColor": "#E07B1A",
+      "warnColor": "#F2C230"
+    }
   },
   "media": []
 }
