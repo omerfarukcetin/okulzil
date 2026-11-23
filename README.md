@@ -87,7 +87,7 @@ Panelde **Ekran** sekmesinden:
 - **Medya:** JPG, PNG, WEBP, GIF, MP4, WEBM yüklenir (dosya başına en fazla 2 GB). Sıra, resim süresi, video sesi ve yayında olup olmadığı ayarlanır.
 - "Medyayı sadece teneffüs ve ders dışında göster" seçilirse ders sırasında Klasik düzene geçer.
 
-Videolar varsayılan olarak sessizdir (ses zil hoparlörlerinden çıkacağı için). Sesli işaretlenen video zil ve anons sırasında kısa süre susturulur.
+Videolar **her zaman sessiz** oynar; bilgisayar zil sistemine bağlı olduğu için video sesi açılamaz.
 Medya dosyaları ayar klasöründeki `media/` klasöründe saklanır.
 
 Panelin kendi teması sağ üstteki düğmeyle değişir: Otomatik (cihaza göre) → Açık → Koyu.

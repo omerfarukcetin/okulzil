@@ -410,7 +410,7 @@
 
   // ---------- Medya oynatıcı ----------
   const player = { box: null, key: '', list: [], idx: -1, el: null, timer: null };
-  const mediaKey = (list) => (list || []).map((m) => m.id + ':' + m.duration + ':' + m.sound).join('|');
+  const mediaKey = (list) => (list || []).map((m) => m.id + ':' + m.duration).join('|');
   function playerSet(box, list) {
     const key = mediaKey(list);
     if (box === player.box && key === player.key) return;
@@ -448,12 +448,17 @@
       player.timer = setTimeout(playerNext, (m.duration || 10) * 1000);
     } else {
       el = document.createElement('video');
-      el.muted = !(m.sound && AUDIO);
+      // Videolar HER ZAMAN sessiz: bilgisayar zil sistemine bağlı
+      el.muted = true;
+      el.defaultMuted = true;
+      el.volume = 0;
+      el.setAttribute('muted', '');
+      el.onvolumechange = () => { if (!el.muted || el.volume > 0) { el.muted = true; el.volume = 0; } };
       el.playsInline = true;
       el.onended = playerNext;
       el.onerror = skip;
       el.src = src;
-      el.play().catch(() => { el.muted = true; el.play().catch(skip); });
+      el.play().catch(skip);
       player.timer = setTimeout(playerNext, 30 * 60 * 1000); // güvenlik: takılırsa geç
     }
     el.className = 'media-el';
@@ -465,13 +470,7 @@
       setTimeout(() => old.remove(), 600);
     }
   }
-  // Zil ya da anons sırasında sesli videoyu kısa süre sustur
-  function duckVideo(ms) {
-    const v = player.el;
-    if (!v || v.tagName !== 'VIDEO' || v.muted) return;
-    v.muted = true;
-    setTimeout(() => { if (player.el === v) v.muted = false; }, ms);
-  }
+
 
   // ---------- Overlay ----------
   let overlayTimer = null;
@@ -708,7 +707,6 @@
   // ---------- Anons ----------
   async function announce(text, repeat) {
     stopMusic();
-    duckVideo(20000 * repeat);
     overlay(text, 15000 * repeat);
     if (!AUDIO) return;
     for (let i = 0; i < repeat; i++) {
@@ -733,7 +731,7 @@
     if (c.action === 'bell') {
       if (!state || state.mode !== 'normal') return;
       stopMusic();
-      if (!c.silent) { duckVideo(8000); playOrSynth(state.sounds[c.bell], 'bell', 4); }
+      if (!c.silent) playOrSynth(state.sounds[c.bell], 'bell', 4);
     } else if (c.action === 'music') {
       c.on ? startMusic() : stopMusic();
     } else if (c.action === 'ceremony') {

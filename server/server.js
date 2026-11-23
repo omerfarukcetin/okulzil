@@ -582,7 +582,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       }
       const name = original.replace(/\.[^.]+$/, '') || file;
       store.update((c) => {
-        c.media.push({ id, file, type, name, duration: 10, sound: false, enabled: true });
+        c.media.push({ id, file, type, name, duration: 10, enabled: true });
       });
       log('Medya eklendi: ' + name);
       pushState();
@@ -603,7 +603,6 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
         if (!m) continue;
         if (typeof it.name === 'string' && it.name.trim()) m.name = it.name.trim().slice(0, 80);
         if (it.duration != null) m.duration = Math.max(3, Math.min(600, Number(it.duration) || 10));
-        if (typeof it.sound === 'boolean') m.sound = it.sound;
         if (typeof it.enabled === 'boolean') m.enabled = it.enabled;
         next.push(m);
         byId.delete(m.id);

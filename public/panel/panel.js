@@ -744,10 +744,7 @@
         dur.onchange = () => { m.duration = Math.max(3, Math.min(600, Number(dur.value) || 10)); saveMedia(); };
         ctrl.append(dur, el('span', 'm-meta', 'sn'));
       } else {
-        const sl = el('label', 'check'); const s = el('input'); s.type = 'checkbox'; s.checked = !!m.sound;
-        s.onchange = () => { m.sound = s.checked; saveMedia(); };
-        sl.append(s, document.createTextNode('Sesli'));
-        ctrl.append(sl);
+        ctrl.append(el('span', 'm-meta', 'Sessiz oynar'));
       }
       const onl = el('label', 'check'); const on = el('input'); on.type = 'checkbox'; on.checked = m.enabled !== false;
       on.onchange = () => { m.enabled = on.checked; saveMedia(); renderMedia(); };
@@ -769,7 +766,7 @@
     });
   }
   async function saveMedia() {
-    const items = config.media.map((m) => ({ id: m.id, duration: m.duration, sound: !!m.sound, enabled: m.enabled !== false }));
+    const items = config.media.map((m) => ({ id: m.id, duration: m.duration, enabled: m.enabled !== false }));
     const r = await api('PUT', '/media', { items });
     flash('mediaMsg', r.ok ? 'Kaydedildi' : r.error, !r.ok);
   }
