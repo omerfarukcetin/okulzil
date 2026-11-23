@@ -24,7 +24,23 @@ function lanAddresses() {
   return out;
 }
 
+// Arayüz dosyalarından bir sürüm kimliği üretir; dosyalar değişince TV ve paneller kendini yeniler
+function buildId() {
+  const crypto = require('crypto');
+  const h = crypto.createHash('sha1');
+  const walk = (dir) => {
+    for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, f.name);
+      if (f.isDirectory()) walk(p);
+      else h.update(p + fs.readFileSync(p));
+    }
+  };
+  walk(path.join(__dirname, '..', 'public'));
+  return h.digest('hex').slice(0, 10);
+}
+
 function startServer({ dataDir, port, bundledSoundsDir }) {
+  const BUILD = buildId();
   const store = createStore(dataDir);
   const cfg = () => store.get();
   const soundsDir = path.join(dataDir, 'sounds');
@@ -69,6 +85,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   function publicState() {
     const c = cfg();
     return {
+      build: BUILD,
       audio: audioStatus(),
       mode: state.mode,
       alarm: state.alarm,
@@ -218,8 +235,10 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
   const pub = path.join(__dirname, '..', 'public');
-  app.use('/pano', express.static(path.join(pub, 'pano')));
-  app.use('/panel', express.static(path.join(pub, 'panel')));
+  // Tarayıcı arayüz dosyalarını her açılışta kontrol etsin (eski sürüm önbellekte kalmasın)
+  const noCache = { etag: true, lastModified: true, setHeaders: (res) => res.set('Cache-Control', 'no-cache') };
+  app.use('/pano', express.static(path.join(pub, 'pano'), noCache));
+  app.use('/panel', express.static(path.join(pub, 'panel'), noCache));
   app.use('/media', express.static(mediaDir, {
     maxAge: '1d',
     // Yüklenen SVG içindeki betikler çalışmasın
@@ -317,7 +336,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     res.json(rest);
   });
   api.get('/log', (req, res) => res.json(recent));
-  api.get('/info', (req, res) => res.json({ addresses: lanAddresses(), port, dataDir, soundsDir }));
+  api.get('/info', (req, res) => res.json({ addresses: lanAddresses(), port, dataDir, soundsDir, build: BUILD }));
 
   api.post('/bell/ring', (req, res) => {
     const bell = ['teacher', 'student', 'end'].includes(req.body.bell) ? req.body.bell : 'student';
@@ -635,7 +654,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   app.use('/api', api);
 
   const server = app.listen(port, '0.0.0.0', () => {
-    log('Sunucu çalışıyor: http://localhost:' + port + ' · Ağ: ' + lanAddresses().map((a) => 'http://' + a + ':' + port).join(', '));
+    log('Sürüm ' + BUILD + ' · Sunucu çalışıyor: http://localhost:' + port + ' · Ağ: ' + lanAddresses().map((a) => 'http://' + a + ':' + port).join(', '));
   });
 
   return {

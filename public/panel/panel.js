@@ -100,11 +100,15 @@
 
   // ---------- Canlı durum ----------
   let es = null;
+  let loadedBuild = null;
   function connect() {
     if (es) es.close();
     es = new EventSource('/events');
     es.addEventListener('state', (e) => {
       state = JSON.parse(e.data);
+      // Program güncellendiyse panel kendini yeniler
+      if (loadedBuild && state.build && state.build !== loadedBuild) { location.reload(); return; }
+      if (!loadedBuild) loadedBuild = state.build;
       renderState();
     });
     es.onerror = () => {
@@ -872,6 +876,7 @@
       box.appendChild(el('div', '', 'Telefondan açmak için (okul ağında):'));
       for (const a of info.addresses) box.appendChild(el('div', '', 'http://' + a + ':' + info.port + '/panel/'));
       box.appendChild(el('div', '', 'Ses dosyaları klasörü: ' + info.soundsDir));
+      box.appendChild(el('div', '', 'Program sürümü: ' + info.build));
     }
     const log = await api('GET', '/log');
     const lb = $('logList');

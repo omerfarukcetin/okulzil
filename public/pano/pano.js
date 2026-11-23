@@ -758,11 +758,16 @@
   }
 
   // ---------- Bağlantı ----------
+  let loadedBuild = null;
   function connect() {
     const es = new EventSource('/events');
     es.addEventListener('state', (e) => {
       const prev = state;
       state = JSON.parse(e.data);
+      // Program güncellendiyse (git pull + yeniden başlatma) sayfayı kendiliğinden yenile.
+      // Tören ya da alarm sürerken yenilenmez.
+      if (loadedBuild && state.build && state.build !== loadedBuild && state.mode === 'normal') { location.reload(); return; }
+      if (!loadedBuild) loadedBuild = state.build;
       clockOffset = state.serverTime - Date.now();
       renderBoard();
       tickClock();

@@ -26,6 +26,13 @@ Sadece tarayıcıda denemek için (Electron olmadan): `npm run server`, sonra
 
 Testler: `npm test`
 
+### Güncelleme
+
+```
+git pull
+```
+sonra sunucuyu yeniden başlatın (`Ctrl+C`, `npm run server` ya da `npm start`). Açık olan TV panosu ve paneller yeni sürümü kendiliğinden algılayıp yenilenir (tören ya da alarm sürüyorsa bittikten sonra). Çalışan sürüm panelde **Ayarlar → Bağlantı** bölümünde yazar.
+
 ## Ses dosyaları
 
 `sounds/` klasörüne (ya da paneldeki **Ayarlar → Bağlantı** bölümünde yazan ses klasörüne) şu adlarla koyun:
