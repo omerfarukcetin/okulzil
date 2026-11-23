@@ -225,3 +225,16 @@ body[data-theme="light"] .cd-chips .chip .n, body[data-theme="sand"] .cd-chips .
 .cd-card { background: var(--card); border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cd-card .t { font-size: 16px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cd-card .n { font-size: 28px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+
+/* ---------- GÜNÜN SÖZÜ ---------- */
+.quote-card { gap: 4px; padding: 14px 22px; }
+.quote-card .label { font-size: 13px; }
+.quote-text { font-size: 20px; font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.quote-mean { font-size: 15px; color: var(--muted); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#scr-classic .col > * { flex-shrink: 0; }
+#scr-classic .col { gap: 18px; }
+body.big-count #scr-classic .clock-card { flex: 1 1 auto; min-height: 0; flex-shrink: 1; }
+
+/* ---------- KARARTMA ---------- */
+.dim { position: absolute; inset: 0; background: #000; z-index: 100; display: none; }
+.dim.on { display: block; }

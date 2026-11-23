@@ -270,6 +270,7 @@
     setText('js-ticker', b.ticker || state.schoolName);
     renderWeather();
     renderCountdowns();
+    renderQuote();
     renderAnnouncements();
     const day = state.day;
     setText('js-prog', day.schoolDay ? day.programName : day.reason);
@@ -310,6 +311,46 @@
       el.querySelector('b').textContent = w.temp + '°';
       el.querySelector('span').textContent = w.max + '° / ' + w.min + '°';
     });
+  }
+
+  // ---------- Günün sözü ----------
+  function renderQuote() {
+    const q = state.quote;
+    all('js-quote-card').forEach((el) => el.classList.toggle('hide', !q));
+    if (!q) return;
+    setText('js-quote-kind', ({ 'Atasözü': 'GÜNÜN ATASÖZÜ', 'Deyim': 'GÜNÜN DEYİMİ' })[q.kind] || 'GÜNÜN SÖZÜ');
+    setText('js-quote-text', q.text);
+    setText('js-quote-mean', q.meaning || '');
+    // Medya düzeninde kart yok; söz kayan yazıda da görünür
+    const tick = (state.board && state.board.ticker) || state.schoolName;
+    setText('js-ticker', tick + '   •   ' + q.kind + ': ' + q.text + (q.meaning ? ' (' + q.meaning + ')' : ''));
+  }
+
+  // ---------- Karartma: ders saatleri dışında TV siyah ----------
+  function shouldDim() {
+    if (PREVIEW || !state) return false;
+    const o = state.dimOverride;
+    if (o && o.until > Date.now()) return o.value === 'dim';
+    const dd = (state.display && state.display.dim) || {};
+    if (dd.mode === 'off') return false;
+    const day = state.day;
+    if (!day.schoolDay || !day.lessons.length) return dd.holidays !== false;
+    const d = now();
+    const cur = d.getHours() * 60 + d.getMinutes();
+    const start = toMin(day.lessons[0].start) - (Number(dd.before) || 0);
+    const end = toMin(day.lessons[day.lessons.length - 1].end) + (Number(dd.after) || 0);
+    // Gün içindeki otomatik törenler de açık kalsın
+    const cer = day.events.filter((e) => e.kind === 'ceremony').map((e) => toMin(e.time));
+    const nearCer = cer.some((t) => cur >= t - 10 && cur <= t + 20);
+    return (cur < start || cur > end) && !nearCer;
+  }
+  let dimmed = false;
+  function applyDim() {
+    const on = screen === 'normal' && shouldDim();
+    if (on === dimmed) return;
+    dimmed = on;
+    $('dim').classList.toggle('on', on);
+    if (on) playerStop(); else updateLayout();
   }
 
   // ---------- Geri sayım ----------
@@ -466,6 +507,7 @@
     set({ period: 'Dersler bitti', title: 'Bugünlük dersler bitti', sub: 'İyi akşamlar', idle: true });
   }
   setInterval(tickClock, 1000);
+  setInterval(() => { try { applyDim(); } catch (e) {} }, 1000);
 
   // ---------- Düzen seçimi ----------
   let screen = 'normal'; // normal | anthem | saygi | alarm
@@ -479,7 +521,9 @@
   }
   function show(name) {
     screen = name;
+    if (name !== 'normal' && dimmed) { dimmed = false; $('dim').classList.remove('on'); }
     updateLayout();
+    applyDim();
   }
   let shownId = null;
   function updateLayout() {
@@ -490,7 +534,7 @@
       shownId = id;
       document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
     }
-    if (screen === 'normal' && layout !== 'classic') playerSet(document.querySelector('#' + id + ' .media-box'), state.media);
+    if (screen === 'normal' && layout !== 'classic' && !dimmed) playerSet(document.querySelector('#' + id + ' .media-box'), state.media);
     else playerStop();
   }
 

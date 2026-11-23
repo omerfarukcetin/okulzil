@@ -60,7 +60,41 @@
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h2', { text: 'Günün menüsü' })),
         rowsEditor({ list: b.menu, make: () => '', empty: 'Menü girilmedi.', addLabel: 'Yemek ekle', cols: [[null, 'Yemek']] })));
 
-    root.append(h('div', { class: 'grid two' }, left, h('div', { class: 'grid' }, mediaCard())));
+    root.append(h('div', { class: 'grid two' }, left, h('div', { class: 'grid' }, quoteCard(), mediaCard())));
+  }
+
+  // ---------- Günün sözü ----------
+  function quoteCard() {
+    const q = { enabled: true, kinds: 'both', showMeaning: true, custom: [], ...(App.config.quote || {}) };
+    const putQ = (patch, msg) => { Object.assign(q, patch); App.config.quote = { ...q }; return save(api('PUT', '/quote', patch), msg === undefined ? null : msg); };
+    const today = App.state.quote;
+    const prev = h('div', { class: 'card', style: { boxShadow: 'none', background: 'var(--surface-2)', marginTop: '12px' } },
+      h('div', { class: 'small muted', text: 'Bugün TV\'de' }),
+      today ? [h('div', { style: { fontWeight: 700, fontSize: '17px', marginTop: '4px' }, text: today.text }), today.meaning ? h('div', { class: 'small muted', text: today.meaning }) : null, h('span', { class: 'chip', style: { marginTop: '8px' }, text: today.kind })]
+        : h('div', { class: 'small', text: 'Kapalı' }));
+    let saveT = null;
+    const custom = q.custom.map((x) => ({ ...x }));
+    const saveCustom = () => { clearTimeout(saveT); saveT = setTimeout(() => putQ({ custom: custom.filter((x) => x.text.trim()) }, 'Kaydedildi'), 700); };
+    const box = h('div', { class: 'list-rows' });
+    const draw = () => {
+      box.innerHTML = '';
+      custom.forEach((x, i) => {
+        const t = h('input', { value: x.text, placeholder: 'Söz', 'aria-label': 'Söz' }); t.oninput = () => { x.text = t.value; saveCustom(); };
+        const m = h('input', { value: x.meaning, placeholder: 'Anlamı (isteğe bağlı)', 'aria-label': 'Anlamı' }); m.oninput = () => { x.meaning = m.value; saveCustom(); };
+        box.append(h('div', { class: 'list-row', style: { flexWrap: 'wrap' } }, h('div', { class: 'grow', style: { minWidth: '160px' } }, t), h('div', { class: 'grow', style: { minWidth: '160px' } }, m),
+          h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Sil', onclick: () => { custom.splice(i, 1); draw(); saveCustom(); } }, icon('trash', 'sm'))));
+      });
+      box.append(h('button', { class: 'btn sm', style: { alignSelf: 'flex-start' }, type: 'button', onclick: () => { custom.push({ text: '', meaning: '' }); draw(); } }, icon('plus', 'sm'), 'Kendi sözünü ekle'));
+    };
+    draw();
+    return h('div', { class: 'card' },
+      h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Günün sözü' }), h('p', { text: 'Her gün bir atasözü ya da deyim, anlamıyla birlikte' }))),
+      toggle('TV\'de göster', q.enabled, (v) => putQ({ enabled: v }, v ? 'Günün sözü açık' : 'Günün sözü kapalı')),
+      h('div', { class: 'lbl', text: 'Neler gösterilsin?' }),
+      segmented([['both', 'Atasözü + deyim'], ['atasozu', 'Atasözü'], ['deyim', 'Deyim'], ['custom', 'Sadece benimkiler']], q.kinds, (v) => putQ({ kinds: v }, 'Kaydedildi'), 'block'),
+      toggle('Anlamını da göster', q.showMeaning !== false, (v) => putQ({ showMeaning: v })),
+      prev,
+      h('details', { class: 'more' }, h('summary', { text: 'Kendi sözlerim (' + custom.filter((x) => x.text).length + ')' }), h('p', { class: 'small muted', text: 'Eklediğiniz sözler de sıraya girer (ör. Atatürk\'ün sözleri, okulun sloganı).' }), box));
   }
 
   // ---------- Medya ----------

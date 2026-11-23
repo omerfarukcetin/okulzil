@@ -253,6 +253,23 @@ function currentPhase(day) {
   }
   return { phase: 'off', kicker: 'GÜN BİTTİ', title: 'Bugünlük dersler bitti', sub: 'İyi akşamlar' };
 }
+// TV şu an karartılmış mı? (panodaki hesabın aynısı)
+function tvDimmed(s) {
+  if (!s) return false;
+  if (s.mode !== 'normal') return false;
+  const o = s.dimOverride;
+  if (o && o.until > Date.now()) return o.value === 'dim';
+  const dd = (s.display && s.display.dim) || {};
+  if (dd.mode === 'off') return false;
+  const day = s.day;
+  if (!day.schoolDay || !day.lessons.length) return dd.holidays !== false;
+  const d = serverNow();
+  const cur = d.getHours() * 60 + d.getMinutes();
+  const start = toMin(day.lessons[0].start) - (Number(dd.before) || 0);
+  const end = toMin(day.lessons[day.lessons.length - 1].end) + (Number(dd.after) || 0);
+  const nearCer = day.events.some((e) => e.kind === 'ceremony' && cur >= toMin(e.time) - 10 && cur <= toMin(e.time) + 20);
+  return (cur < start || cur > end) && !nearCer;
+}
 const STEP_NAMES = { siren: 'Siren', silence: 'Saygı duruşu (sessiz)', anthem: 'İstiklal Marşı' };
 const STEP_SHORT = { siren: 'Siren', silence: 'Saygı duruşu', anthem: 'İstiklal Marşı' };
 

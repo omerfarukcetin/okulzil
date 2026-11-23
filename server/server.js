@@ -41,6 +41,22 @@ function buildId() {
 
 function startServer({ dataDir, port, bundledSoundsDir }) {
   const BUILD = buildId();
+  const SOZLER = require('./sozler.json');
+  // Her gün aynı söz; liste karışık sırayla dolaşılır
+  function quoteOfDay() {
+    const q = cfg().quote || {};
+    if (q.enabled === false) return null;
+    const kinds = q.kinds || 'both';
+    let pool = [];
+    if (kinds === 'both' || kinds === 'atasozu') pool = pool.concat(SOZLER.atasozu.map(([t, m]) => ({ kind: 'Atasözü', text: t, meaning: m })));
+    if (kinds === 'both' || kinds === 'deyim') pool = pool.concat(SOZLER.deyim.map(([t, m]) => ({ kind: 'Deyim', text: t, meaning: m })));
+    pool = pool.concat((q.custom || []).map((x) => ({ kind: 'Günün sözü', text: x.text, meaning: x.meaning })));
+    if (!pool.length) return null;
+    const d = new Date();
+    const dayNo = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+    const pick = pool[(dayNo * 7919) % pool.length];
+    return { ...pick, meaning: q.showMeaning === false ? '' : pick.meaning };
+  }
   const store = createStore(dataDir);
   const cfg = () => store.get();
   const soundsDir = path.join(dataDir, 'sounds');
@@ -60,7 +76,32 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   }
 
   let weather = null; // son hava durumu
-  const state = { mode: 'normal', alarm: null, ceremony: null, skipNext: null, music: false };
+  // ---------- Telefona bildirim (Telegram) ----------
+  const TG_BASE = process.env.ZIL_TELEGRAM_BASE || 'https://api.telegram.org';
+  async function tgCall(token, method, body) {
+    const r = await fetch(TG_BASE + '/bot' + token + '/' + method, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), signal: AbortSignal.timeout(10000)
+    });
+    return r.json();
+  }
+  const lastNotify = {};
+  // kind: alarm | ceremony | audio | system — panelde hangisinin gönderileceği seçilir
+  function notify(kind, text, throttleMin) {
+    const t = cfg().telegram || {};
+    if (!t.enabled || !t.token || !(t.chats || []).length) return;
+    if (t.events && t.events[kind] === false) return;
+    if (throttleMin) {
+      if (lastNotify[kind] && Date.now() - lastNotify[kind] < throttleMin * 60000) return;
+      lastNotify[kind] = Date.now();
+    }
+    const msg = cfg().schoolName + '\n' + text;
+    for (const ch of t.chats) {
+      tgCall(t.token, 'sendMessage', { chat_id: ch.id, text: msg }).catch(() => log('Telegram bildirimi gönderilemedi (internet?)'));
+    }
+  }
+  const hhmm = () => new Date().toTimeString().slice(0, 5);
+
+  const state = { dimOverride: null, mode: 'normal', alarm: null, ceremony: null, skipNext: null, music: false };
   let ceremonyTimer = null;
 
   // --- SSE: pano ve paneller canlı olarak buradan dinler ---
@@ -99,6 +140,8 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       emergency: c.emergency,
       display: c.display,
       weather: weather && (c.weather || {}).enabled ? weather : null,
+      quote: quoteOfDay(),
+      dimOverride: state.dimOverride && state.dimOverride.until > Date.now() ? state.dimOverride : null,
       ceremonies: c.ceremonies.map((x) => ({ id: x.id, name: x.name, mode: x.mode, steps: x.steps, screen: x.screen })),
       media: c.media.filter((m) => m.enabled !== false),
       sounds: c.sounds,
@@ -153,6 +196,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     armCeremonyTimer();
     const st = c.steps[c.step] || {};
     log('Tören başladı: ' + c.name + ' · ' + (STEP_LABELS[st.type] || st.type) + ' (' + by + ')');
+    notify('ceremony', '🇹🇷 ' + c.name + ': ' + (STEP_LABELS[st.type] || st.type) + ' başladı (' + hhmm() + ')');
     cmd({ action: 'ceremonyGo', id: c.id, step: c.step });
     pushState();
     return { ok: true };
@@ -177,6 +221,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     state.ceremony = null;
     state.alarm = { type, name: ALARMS[type], drill: !!drill, startedAt: Date.now() };
     log((drill ? 'TATBİKAT ' : 'ALARM ') + ALARMS[type] + ' başlatıldı');
+    notify('alarm', (drill ? '🟠 TATBİKAT: ' : '🚨 GERÇEK ALARM: ') + ALARMS[type] + ' (' + hhmm() + ')');
     cmd({ action: 'alarm', alarm: state.alarm });
     pushState();
     return { ok: true };
@@ -185,7 +230,10 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   function stopAll(by) {
     clearTimeout(ceremonyTimer);
     clearTimeout(goTimer);
-    if (state.mode === 'alarm') log('Alarm durduruldu' + (by ? ' (' + by + ')' : ''));
+    if (state.mode === 'alarm') {
+      log('Alarm durduruldu' + (by ? ' (' + by + ')' : ''));
+      notify('alarm', '✅ ' + state.alarm.name + (state.alarm.drill ? ' tatbikatı' : ' alarmı') + ' durduruldu (' + hhmm() + ')');
+    }
     if (state.mode === 'ceremony') log('Tören durduruldu' + (by ? ' (' + by + ')' : ''));
     state.mode = 'normal';
     state.alarm = null;
@@ -218,6 +266,13 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       if (state.mode === 'ceremony') return log('Atlandı (tören sürüyor): ' + ev.label);
       ringBell(ev.bell, ev.label, day.silent);
       log((day.silent ? 'Sessiz zil: ' : 'Zil: ') + ev.label);
+      if (!day.silent) {
+        const a = audioStatus();
+        if (!a.ready) {
+          log('UYARI: zil çaldı ama ses çıkışı yok');
+          notify('audio', '⚠️ ' + ev.time + ' ' + ev.label + ' çalmadı: ' + (a.panos ? 'pano sesi kapalı (ekrana bir kez tıklanmalı)' : 'TV panosu açık değil'), 30);
+        }
+      }
       pushState();
     } else if (ev.kind === 'music') {
       if (state.mode !== 'normal') return;
@@ -335,8 +390,9 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
 
   api.post('/login', (req, res) => res.json({ ok: true }));
   api.get('/config', (req, res) => {
-    const { pin, ...rest } = cfg();
-    res.json(rest);
+    const { pin, telegram, ...rest } = cfg();
+    const t = telegram || {};
+    res.json({ ...rest, telegram: { enabled: !!t.enabled, hasToken: !!t.token, chats: t.chats || [], events: t.events || {} } });
   });
   api.get('/log', (req, res) => res.json(recent));
   api.get('/info', (req, res) => res.json({ addresses: lanAddresses(), port, dataDir, soundsDir, build: BUILD }));
@@ -696,6 +752,88 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     res.json({ ok: true });
   });
 
+  // --- Günün sözü ---
+  api.put('/quote', (req, res) => {
+    const b = req.body || {};
+    store.update((c) => {
+      const q = c.quote || {};
+      if (typeof b.enabled === 'boolean') q.enabled = b.enabled;
+      if (['both', 'atasozu', 'deyim', 'custom'].includes(b.kinds)) q.kinds = b.kinds;
+      if (typeof b.showMeaning === 'boolean') q.showMeaning = b.showMeaning;
+      if (Array.isArray(b.custom)) q.custom = b.custom.map((x) => ({ text: String(x.text || '').trim().slice(0, 200), meaning: String(x.meaning || '').trim().slice(0, 200) })).filter((x) => x.text).slice(0, 365);
+      c.quote = q;
+    });
+    pushState();
+    res.json({ ok: true });
+  });
+
+  // --- Ekran karartma ---
+  api.put('/dim', (req, res) => {
+    const b = req.body || {};
+    store.update((c) => {
+      const d = c.display.dim || {};
+      if (['auto', 'off'].includes(b.mode)) d.mode = b.mode;
+      for (const k of ['before', 'after']) if (b[k] != null) d[k] = Math.max(0, Math.min(180, Number(b[k]) || 0));
+      if (typeof b.holidays === 'boolean') d.holidays = b.holidays;
+      c.display.dim = d;
+    });
+    pushState();
+    res.json({ ok: true });
+  });
+  // Şimdi karart / şimdi aç (belirli süre için elle)
+  api.post('/dim/now', (req, res) => {
+    const v = req.body.value;
+    if (v === 'auto') state.dimOverride = null;
+    else if (v === 'dim' || v === 'wake') state.dimOverride = { value: v, until: Date.now() + (Math.max(10, Math.min(720, Number(req.body.minutes) || 180))) * 60000 };
+    log(v === 'dim' ? 'TV ekranı elle karartıldı' : v === 'wake' ? 'TV ekranı elle açıldı' : 'TV ekranı otomatik karartmaya döndü');
+    pushState();
+    res.json({ ok: true });
+  });
+
+  // --- Telegram ---
+  api.put('/telegram', (req, res) => {
+    const b = req.body || {};
+    store.update((c) => {
+      const t = c.telegram || {};
+      if (typeof b.enabled === 'boolean') t.enabled = b.enabled;
+      if (typeof b.token === 'string' && b.token.trim()) t.token = b.token.trim();
+      if (b.token === null) { t.token = ''; t.chats = []; t.enabled = false; }
+      if (Array.isArray(b.chats)) t.chats = b.chats.filter((x) => x && x.id != null).map((x) => ({ id: x.id, name: String(x.name || x.id).slice(0, 60) })).slice(0, 20);
+      if (b.events && typeof b.events === 'object') t.events = { ...(t.events || {}), ...b.events };
+      c.telegram = t;
+    });
+    res.json({ ok: true });
+  });
+  // Bota mesaj atan sohbetleri bul
+  api.post('/telegram/discover', async (req, res) => {
+    const t = cfg().telegram || {};
+    if (!t.token) return res.json({ ok: false, error: 'Önce bot anahtarını kaydedin' });
+    try {
+      const me = await tgCall(t.token, 'getMe');
+      if (!me.ok) return res.json({ ok: false, error: 'Bot anahtarı geçersiz' });
+      const up = await tgCall(t.token, 'getUpdates', { limit: 100 });
+      const chats = new Map();
+      for (const u of up.result || []) {
+        const ch = (u.message || u.channel_post || u.my_chat_member || {}).chat;
+        if (ch) chats.set(ch.id, { id: ch.id, name: ch.title || [ch.first_name, ch.last_name].filter(Boolean).join(' ') || ch.username || String(ch.id) });
+      }
+      res.json({ ok: true, bot: me.result.username, chats: [...chats.values()] });
+    } catch (e) {
+      res.json({ ok: false, error: 'Telegram\'a ulaşılamadı. Okul bilgisayarında internet var mı?' });
+    }
+  });
+  api.post('/telegram/test', async (req, res) => {
+    const t = cfg().telegram || {};
+    if (!t.token || !(t.chats || []).length) return res.json({ ok: false, error: 'Bot anahtarı ve en az bir sohbet gerekli' });
+    try {
+      const results = await Promise.all(t.chats.map((ch) => tgCall(t.token, 'sendMessage', { chat_id: ch.id, text: cfg().schoolName + '\n✅ Test bildirimi: Okul Zil sistemi bildirimleri çalışıyor.' })));
+      const bad = results.filter((r) => !r.ok).length;
+      res.json(bad ? { ok: false, error: bad + ' sohbete gönderilemedi' } : { ok: true });
+    } catch (e) {
+      res.json({ ok: false, error: 'Telegram\'a ulaşılamadı. Okul bilgisayarında internet var mı?' });
+    }
+  });
+
   // --- Yedekleme ---
   // Ayarlar, sesler ve medya tek ZIP dosyasında
   api.get('/backup', (req, res) => {
@@ -865,6 +1003,32 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   });
 
   app.use('/api', api);
+
+  // Ders saatlerinde pano 3 dakikadan uzun süre kapalı kalırsa haber ver
+  let panoMissingSince = null;
+  let panoAlerted = false;
+  setInterval(() => {
+    const day = scheduler.today();
+    if (!day.schoolDay || !day.lessons.length) { panoMissingSince = null; return; }
+    const now = new Date();
+    const hm = now.getHours() * 60 + now.getMinutes();
+    const toM = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
+    const inHours = hm >= toM(day.lessons[0].start) - 15 && hm <= toM(day.lessons[day.lessons.length - 1].end);
+    const a = audioStatus();
+    if (inHours && !a.ready) {
+      if (!panoMissingSince) panoMissingSince = Date.now();
+      if (!panoAlerted && Date.now() - panoMissingSince > 3 * 60000) {
+        panoAlerted = true;
+        log('UYARI: ders saatinde ses çıkışı yok');
+        notify('audio', '⚠️ Ders saatinde zil sesi çıkmıyor: ' + (a.panos ? 'pano sesi kapalı' : 'TV panosu açık değil') + ' (' + hhmm() + ')');
+      }
+    } else {
+      if (panoAlerted && a.ready) notify('audio', '✅ Ses çıkışı yeniden hazır (' + hhmm() + ')');
+      panoMissingSince = null;
+      panoAlerted = false;
+    }
+  }, 60000);
+  setTimeout(() => notify('system', '🔔 Okul Zil sistemi açıldı (' + hhmm() + ')'), 5000);
 
   const server = app.listen(port, '0.0.0.0', () => {
     log('Sürüm ' + BUILD + ' · Sunucu çalışıyor: http://localhost:' + port + ' · Ağ: ' + lanAddresses().map((a) => 'http://' + a + ':' + port).join(', '));

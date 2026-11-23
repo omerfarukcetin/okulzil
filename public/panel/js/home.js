@@ -61,6 +61,12 @@
     const s = App.state;
     // Ses uyarısı
     refs.notice.innerHTML = '';
+    if (tvDimmed(s)) {
+      refs.notice.append(h('div', { class: 'notice', style: { background: 'var(--surface-2)', color: 'var(--text)' } }, icon('moon'), h('div', { class: 'grow' },
+        h('b', { text: 'TV ekranları karartıldı' }), s.dimOverride ? 'Elle karartıldı.' : 'Ders saatleri dışında ekranlar siyah kalır.'),
+        h('button', { class: 'btn sm', type: 'button', onclick: () => save(api('POST', '/dim/now', { value: 'wake', minutes: 180 }), 'TV ekranları 3 saatliğine açıldı') }, 'Şimdi aç')));
+      return renderNext();
+    }
     const a = s.audio || {};
     if (!a.ready) {
       refs.notice.append(h('div', { class: 'notice' }, icon('alert'), h('div', {},

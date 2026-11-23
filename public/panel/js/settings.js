@@ -6,6 +6,7 @@
     ['look', 'Görünüm', 'palette'],
     ['sounds', 'Sesler', 'volume'],
     ['calendar', 'Takvim', 'calendar'],
+    ['notify', 'Bildirim', 'bell'],
     ['system', 'Sistem', 'info']
   ];
 
@@ -16,7 +17,7 @@
       h('button', { type: 'button', 'aria-current': String(id === sub), onclick: () => { App.sub.set = id; App.render(); } }, icon(ic, 'sm'), label))));
     const body = h('div');
     root.append(body);
-    ({ general, look, sounds, calendar, system })[sub](body);
+    ({ general, look, sounds, calendar, notify, system })[sub](body);
   }
 
   // ================= GENEL =================
@@ -207,7 +208,24 @@
       toggle('İlerleme çubuğunu göster', a.showProgress, (v) => putA({ showProgress: v })),
       h('p', { class: 'small muted', text: 'Saygı duruşu ekranı her törenin kendi ayarlarındadır (Törenler › Düzenle).' }));
 
-    const settingsCol = h('div', { class: 'grid' }, logoCard, lookCard, statusCard, anthemCard);
+    // Ekran karartma
+    const dm = { mode: 'auto', before: 30, after: 30, holidays: true, ...(d.dim || {}) };
+    const putDim = (patch) => { Object.assign(dm, patch); d.dim = { ...dm }; return save(api('PUT', '/dim', patch), null); };
+    const before = h('input', { type: 'number', min: 0, max: 180, value: dm.before }); before.onchange = () => putDim({ before: Number(before.value) || 0 });
+    const after = h('input', { type: 'number', min: 0, max: 180, value: dm.after }); after.onchange = () => putDim({ after: Number(after.value) || 0 });
+    const dimNow = (value, msg) => save(api('POST', '/dim/now', { value, minutes: 180 }), msg);
+    const dimCard = h('div', { class: 'card' },
+      h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Ekran karartma' }), h('p', { text: 'Ders saatleri dışında TV\'lere siyah ekran gider: elektrik tasarrufu ve ekranlarda iz kalmaması için' }))),
+      toggle('Ders saatleri dışında karart', dm.mode !== 'off', (v) => putDim({ mode: v ? 'auto' : 'off' })),
+      h('div', { class: 'grid two', style: { gap: '12px', marginTop: '6px' } }, field('İlk dersten kaç dk önce açılsın', before), field('Son dersten kaç dk sonra kararsın', after)),
+      toggle('Hafta sonu ve tatillerde karart', dm.holidays !== false, (v) => putDim({ holidays: v })),
+      h('p', { class: 'small muted', text: 'Törenler, alarmlar ve anonslar karartmayı her zaman açar.' }),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn sm', type: 'button', onclick: () => dimNow('dim', 'TV ekranları 3 saatliğine karartıldı') }, icon('moon', 'sm'), 'Şimdi karart'),
+        h('button', { class: 'btn sm', type: 'button', onclick: () => dimNow('wake', 'TV ekranları 3 saatliğine açıldı') }, icon('sun', 'sm'), 'Şimdi aç'),
+        h('button', { class: 'btn sm ghost', type: 'button', onclick: () => dimNow('auto', 'Otomatik karartmaya dönüldü') }, 'Otomatiğe dön')));
+
+    const settingsCol = h('div', { class: 'grid' }, logoCard, lookCard, statusCard, dimCard, anthemCard);
     root.append(h('div', { class: 'grid look' }, settingsCol, preview));
     // Telefonda önizleme üstte dursun
     if (matchMedia('(max-width: 959px)').matches) root.querySelector('.grid.look').prepend(preview);
@@ -353,6 +371,69 @@
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Tatiller' }), h('p', { text: 'Resmî tatiller her yıl tekrar eder. Dinî bayramları her yıl "Bir kez" olarak ekleyin.' }))), holBox),
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Uzun tatiller' }), h('p', { text: 'Ara tatil, yarıyıl tatili gibi tarih aralıkları' }))), brkBox),
       h('div', { class: 'row end' }, h('button', { class: 'btn primary lg', type: 'button', onclick: doSave }, icon('check', 'sm'), 'Takvimi kaydet'))));
+  }
+
+  // ================= BİLDİRİM (Telegram) =================
+  function notify(root) {
+    const t = { enabled: false, hasToken: false, chats: [], events: {}, ...(App.config.telegram || {}) };
+    const ev = { alarm: true, ceremony: false, audio: true, system: true, ...t.events };
+    const putT = (patch, msg) => {
+      // Panelin elindeki ayarları da güncelle
+      const cur = App.config.telegram || {};
+      App.config.telegram = { ...cur, ...patch, events: { ...(cur.events || {}), ...(patch.events || {}) }, hasToken: patch.token === null ? false : patch.token ? true : cur.hasToken };
+      if (patch.token === null) { App.config.telegram.chats = []; App.config.telegram.enabled = false; }
+      delete App.config.telegram.token;
+      return save(api('PUT', '/telegram', patch), msg === undefined ? null : msg);
+    };
+    const token = h('input', { type: 'password', placeholder: t.hasToken ? 'Kayıtlı (değiştirmek için yenisini yapıştırın)' : '123456789:ABC…', autocomplete: 'off' });
+    const chatBox = h('div', { class: 'list-rows' });
+    const drawChats = () => {
+      chatBox.innerHTML = '';
+      if (!t.chats.length) chatBox.append(h('div', { class: 'small muted', text: 'Henüz sohbet eklenmedi.' }));
+      t.chats.forEach((ch, i) => chatBox.append(h('div', { class: 'file-row' }, icon('megaphone', 'sm'), h('span', { class: 'nm', text: ch.name }),
+        h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': 'Kaldır', onclick: async () => { t.chats.splice(i, 1); await putT({ chats: t.chats }, 'Kaldırıldı'); drawChats(); } }, icon('trash', 'sm')))));
+    };
+    drawChats();
+    const found = h('div', { class: 'list-rows', style: { marginTop: '8px' } });
+    const discover = async () => {
+      found.replaceChildren(h('div', { class: 'small muted', text: 'Aranıyor…' }));
+      const r = await api('POST', '/telegram/discover');
+      found.innerHTML = '';
+      if (!r.ok) return found.append(h('div', { class: 'small', style: { color: 'var(--bad)' }, text: r.error }));
+      const fresh = r.chats.filter((c) => !t.chats.some((x) => String(x.id) === String(c.id)));
+      if (!fresh.length) return found.append(h('div', { class: 'small muted', text: 'Yeni sohbet bulunamadı. Telefondan @' + r.bot + ' botuna bir mesaj yazıp (ya da grubu ekleyip) tekrar deneyin.' }));
+      for (const c of fresh) found.append(h('button', { class: 'btn sm', style: { justifyContent: 'flex-start' }, type: 'button', onclick: async () => {
+        t.chats.push(c); await putT({ chats: t.chats, enabled: true }, c.name + ' eklendi'); t.enabled = true; found.innerHTML = ''; drawChats(); App.render();
+      } }, icon('plus', 'sm'), c.name));
+    };
+    root.append(h('div', { class: 'grid two' },
+      h('div', { class: 'grid' },
+        h('div', { class: 'card' },
+          h('div', { class: 'card-head' }, h('div', {}, h('h2', { text: 'Telefona bildirim' }), h('p', { text: 'Alarm başladığında ya da zil sesi çıkmadığında Telegram ile anında haber verir. Okul bilgisayarında internet gerekir.' }))),
+          toggle('Bildirimler açık', t.enabled, async (v) => { t.enabled = v; await putT({ enabled: v }, v ? 'Bildirimler açıldı' : 'Bildirimler kapandı'); }),
+          h('div', { class: 'section-title', text: 'Ne zaman haber verilsin?' }),
+          toggle('Alarm başlayınca ve durunca', ev.alarm, (v) => putT({ events: { alarm: v } })),
+          toggle('Zil sesi çıkmayınca', ev.audio, (v) => putT({ events: { audio: v } }), 'Pano kapalı ya da sesi kapalıyken zil çalarsa'),
+          toggle('Tören başlayınca', ev.ceremony, (v) => putT({ events: { ceremony: v } })),
+          toggle('Sistem açılınca', ev.system, (v) => putT({ events: { system: v } }), 'Bilgisayar yeniden başladığında')),
+        h('div', { class: 'row' },
+          h('button', { class: 'btn primary', type: 'button', onclick: () => save(api('POST', '/telegram/test'), 'Test mesajı gönderildi') }, icon('megaphone', 'sm'), 'Test mesajı gönder'))),
+      h('div', { class: 'grid' },
+        h('div', { class: 'card' },
+          h('div', { class: 'card-head' }, h('h2', { text: 'Kurulum (bir kez)' })),
+          h('div', { class: 'lbl', style: { marginTop: 0 }, text: '1. Telegram\'da @BotFather\'a yazın, /newbot komutuyla bir bot oluşturun ve verdiği anahtarı buraya yapıştırın:' }),
+          h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, h('div', { class: 'grow' }, token),
+            h('button', { class: 'btn', type: 'button', onclick: async () => {
+              if (!token.value.trim()) return token.focus();
+              await putT({ token: token.value.trim() }, 'Bot anahtarı kaydedildi'); token.value = ''; t.hasToken = true; token.placeholder = 'Kayıtlı (değiştirmek için yenisini yapıştırın)';
+            } }, 'Kaydet')),
+          h('div', { class: 'lbl', text: '2. Bildirim alacak kişiler bota telefondan bir mesaj yazsın (ya da botu idarecilerin Telegram grubuna ekleyin), sonra:' }),
+          h('button', { class: 'btn', type: 'button', onclick: discover }, icon('plus', 'sm'), 'Sohbetleri bul'), found,
+          h('div', { class: 'lbl', text: '3. Bildirim gidecek sohbetler:' }), chatBox,
+          t.hasToken ? h('button', { class: 'btn sm ghost', style: { marginTop: '12px' }, type: 'button', onclick: async () => {
+            if (!(await confirmBox({ title: 'Bot bağlantısı silinsin mi?', text: 'Anahtar ve sohbet listesi silinir, bildirim gitmez.', ok: 'Sil', danger: true }))) return;
+            await putT({ token: null }, 'Bot bağlantısı silindi'); await App.reloadConfig();
+          } }, 'Bot bağlantısını sil') : null))));
   }
 
   // ================= SİSTEM =================

@@ -135,6 +135,19 @@ Panelin kendi teması sağ üstteki düğmeyle değişir: Otomatik (cihaza göre
 - **Hava durumu:** Ayarlar › Genel'den şehir aranıp seçilir; TV'nin sağ üstünde sıcaklık ve gün içi en yüksek/en düşük görünür. Open-Meteo kullanılır (ücretsiz, anahtar gerekmez). Okul bilgisayarında internet yoksa görünmez, zil etkilenmez.
 - **Geri sayım:** Duyurular sayfasından eklenir (örn. "LGS · 187 gün"). En yakın ikisi TV'de görünür; tarihi geçenler kendiliğinden kalkar.
 
+## Günün sözü
+
+Her gün bir atasözü ya da deyim, anlamıyla TV'de görünür (Klasik düzende kart, diğer düzenlerde kayan yazıda). Duyurular sayfasından açılıp kapatılır; atasözü / deyim / ikisi / sadece kendi sözleriniz seçilebilir, kendi sözlerinizi ekleyebilirsiniz.
+
+## Ekran karartma
+
+Ayarlar › Görünüm › **Ekran karartma**: ilk dersten belirli süre önceye ve son dersten belirli süre sonrasına kadar TV açık, dışında siyah ekran (hafta sonu ve tatiller dahil). Törenler, alarmlar ve anonslar karartmayı her zaman açar. Panelden "Şimdi karart" / "Şimdi aç" (3 saatliğine) ve "Otomatiğe dön".
+
+## Telefona bildirim (Telegram)
+
+Ayarlar › **Bildirim**: Telegram'da @BotFather ile bot oluşturup anahtarını yapıştırın, bildirim alacak kişiler bota bir mesaj yazsın (ya da botu idareci grubuna ekleyin), "Sohbetleri bul" ile ekleyin, "Test mesajı gönder" ile deneyin.
+Bildirim gönderilen durumlar (her biri açılıp kapatılabilir): alarm başlayınca/durunca, zil sesi çıkmayınca (pano kapalı ya da sesi kapalıyken zil çalarsa ya da ders saatinde 3 dakikadan uzun süre ses çıkışı yoksa), tören başlayınca, sistem açılınca. Okul bilgisayarında internet gerekir.
+
 ## Yedekleme
 
 Ayarlar › Sistem › **Yedeği indir**: ayarlar, sesler, logo ve medya tek ZIP dosyası. Yeni bilgisayarda **Yedekten geri yükle** ile her şey geri gelir (PIN değişmez, önceki ayarlar ayrıca saklanır).

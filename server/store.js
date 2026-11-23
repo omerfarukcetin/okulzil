@@ -10,10 +10,14 @@ function normalize(saved) {
   data.board = { ...defaults.board, ...(saved.board || {}) };
   if (!Array.isArray(data.board.countdowns)) data.board.countdowns = [];
   data.weather = { ...defaults.weather, ...(saved.weather || {}) };
+  data.quote = { ...defaults.quote, ...(saved.quote || {}) };
+  data.telegram = { ...defaults.telegram, ...(saved.telegram || {}) };
+  data.telegram.events = { ...defaults.telegram.events, ...((saved.telegram && saved.telegram.events) || {}) };
   if (!data.dayPrograms || typeof data.dayPrograms !== 'object') data.dayPrograms = {};
   if (!Array.isArray(data.rangePrograms)) data.rangePrograms = [];
   data.emergency = { ...defaults.emergency, ...(saved.emergency || {}) };
   data.display = { ...defaults.display, ...(saved.display || {}) };
+  data.display.dim = { ...defaults.display.dim, ...((saved.display && saved.display.dim) || {}) };
   data.display.status = { ...defaults.display.status, ...((saved.display && saved.display.status) || {}) };
   data.display.anthemScreen = { ...defaults.display.anthemScreen, ...((saved.display && saved.display.anthemScreen) || {}) };
   const savedAnthem = (saved.display && saved.display.anthemScreen) || {};

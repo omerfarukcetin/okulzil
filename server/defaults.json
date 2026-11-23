@@ -364,7 +364,13 @@
       "video": null
     },
     "showWeather": true,
-    "showCountdown": true
+    "showCountdown": true,
+    "dim": {
+      "mode": "auto",
+      "before": 30,
+      "after": 30,
+      "holidays": true
+    }
   },
   "media": [],
   "setupDone": false,
@@ -375,5 +381,22 @@
     "city": "",
     "lat": null,
     "lon": null
+  },
+  "quote": {
+    "enabled": true,
+    "kinds": "both",
+    "showMeaning": true,
+    "custom": []
+  },
+  "telegram": {
+    "enabled": false,
+    "token": "",
+    "chats": [],
+    "events": {
+      "alarm": true,
+      "ceremony": false,
+      "audio": true,
+      "system": true
+    }
   }
 }
