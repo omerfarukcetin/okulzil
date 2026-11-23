@@ -483,10 +483,6 @@
   }
 
   // ---------- Tören ----------
-  const STANZAS = [
-    'Korkma, sönmez bu şafaklarda yüzen al sancak;\nSönmeden yurdumun üstünde tüten en son ocak.\nO benim milletimin yıldızıdır, parlayacak;\nO benimdir, o benim milletimindir ancak.',
-    'Çatma, kurban olayım, çehreni ey nazlı hilâl!\nKahraman ırkıma bir gül! Ne bu şiddet, bu celâl?\nSana olmaz dökülen kanlarımız sonra helâl.\nHakkıdır, Hakk\'a tapan milletimin istiklâl!'
-  ];
   let runToken = 0;
   let runningCeremonyAt = null;
 
@@ -512,17 +508,60 @@
     });
   }
 
+  // Tören ekranı ayarları (panelden özelleştirilir)
+  const ANTHEM_DEFAULTS = { bg: '#C8102E', kicker: 'LÜTFEN AYAĞA KALKINIZ', title: 'İstiklal Marşı', showCeremonyName: true, showFlag: true, image: null, showProgress: true };
+  const SAYGI_DEFAULTS = { bg: '#121212', kicker: '', title: 'Saygı Duruşu', message: '', image: null, grayscale: false, showSteps: true };
+  const mediaUrl = (f) => '/media/' + encodeURIComponent(f);
+
+  function applyAnthemScreen(c, waiting) {
+    const a = { ...ANTHEM_DEFAULTS, ...((state && state.display && state.display.anthemScreen) || {}) };
+    const scr = $('scr-anthem');
+    scr.style.setProperty('--anthem-bg', a.bg);
+    scr.style.setProperty('--anthem-text', onAccent(a.bg) === '#FFFFFF' ? '#FFFFFF' : '#0E1A2B');
+    $('anthemKicker').textContent = a.kicker;
+    $('anthemKicker').classList.toggle('hide', !a.kicker);
+    $('anthemTitle').textContent = a.title;
+    $('anthemSource').textContent = a.showCeremonyName ? c.name : '';
+    $('anthemSource').classList.toggle('hide', !a.showCeremonyName);
+    const img = $('anthemImg');
+    const useImg = !!a.image;
+    if (useImg && img.getAttribute('src') !== mediaUrl(a.image)) img.src = mediaUrl(a.image);
+    img.classList.toggle('hide', !useImg);
+    $('anthemFlag').classList.toggle('hide', useImg || !a.showFlag);
+    scr.classList.toggle('noimage', !useImg && !a.showFlag);
+    $('anthemBarWrap').classList.toggle('hide', !a.showProgress);
+    $('anthemBar').style.width = '0';
+    $('anthemTime').textContent = '';
+    $('anthemState').textContent = waiting ? 'Başlamaya hazır' : '';
+    scr.classList.toggle('waiting', !!waiting);
+  }
+
+  function applySaygiScreen(c) {
+    const s = { ...SAYGI_DEFAULTS, ...(c.screen || {}) };
+    const scr = $('scr-saygi');
+    scr.style.setProperty('--saygi-bg', s.bg);
+    scr.style.setProperty('--saygi-text', onAccent(s.bg) === '#FFFFFF' ? '#EDEBE7' : '#121212');
+    const d = now();
+    $('saygiKicker').textContent = s.kicker || (d.getDate() + ' ' + MONTHS[d.getMonth()].toUpperCase() + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes()));
+    $('saygiTitle').textContent = s.title;
+    $('saygiLine').textContent = s.message;
+    $('saygiLine').classList.toggle('hide', !s.message);
+    const img = $('portraitImg');
+    if (s.image) { if (img.getAttribute('src') !== mediaUrl(s.image)) img.src = mediaUrl(s.image); }
+    $('portrait').classList.toggle('hide', !s.image);
+    $('portrait').classList.toggle('gray', !!s.grayscale);
+    scr.classList.toggle('noimage', !s.image);
+    scr.classList.toggle('nosteps', !s.showSteps);
+  }
+
   // Bir adımın ekranını sesi başlatmadan hazırlar
   function prepareStep(c, steps, i, waiting) {
     const s = steps[i];
     if (s.type === 'anthem') {
+      applyAnthemScreen(c, waiting);
       show('anthem');
-      $('stanza').textContent = STANZAS[0];
-      $('anthemBar').style.width = '0';
-      $('anthemSource').textContent = c.name + (waiting ? ' · başlamaya hazır' : '');
-      $('anthemTime').textContent = '';
-      $('scr-anthem').classList.toggle('waiting', !!waiting);
     } else {
+      applySaygiScreen(c);
       show('saygi');
       renderSaygiSteps(steps, i, s.seconds || 60, waiting);
     }
@@ -562,8 +601,6 @@
     stopMusic();
     stopAllAudio();
     const steps = c.steps || [];
-    const d = now();
-    $('saygiKicker').textContent = d.getDate() + ' ' + MONTHS[d.getMonth()].toUpperCase() + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     for (let i = 0; i < steps.length; i++) {
       if (token !== runToken) return;
       const s = steps[i];
@@ -588,7 +625,6 @@
           onProgress(t, dur) {
             $('anthemBar').style.width = (t / dur) * 100 + '%';
             $('anthemTime').textContent = Math.floor(t / 60) + ':' + pad(Math.floor(t % 60)) + ' / ' + Math.floor(dur / 60) + ':' + pad(Math.floor(dur % 60));
-            $('stanza').textContent = t > dur / 2 ? STANZAS[1] : STANZAS[0];
           }
         });
         if (!ok) {

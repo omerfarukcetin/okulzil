@@ -93,30 +93,32 @@
 
   <!-- İSTİKLAL MARŞI -->
   <section id="scr-anthem" class="screen anthem">
-    <svg class="flag" viewBox="0 0 360 360" aria-hidden="true">
+    <svg id="anthemFlag" class="flag" viewBox="0 0 360 360" aria-hidden="true">
       <circle cx="150" cy="180" r="120" fill="#fff"/>
-      <circle cx="180" cy="180" r="96" fill="#C8102E"/>
+      <circle cx="180" cy="180" r="96" fill="var(--anthem-bg, #C8102E)"/>
       <polygon fill="#fff" points="300,180 259.4,193.2 259.4,235.9 234.3,201.4 193.7,214.6 218.8,180 193.7,145.4 234.3,158.6 259.4,124.1 259.4,166.8"/>
     </svg>
+    <img id="anthemImg" class="anthem-img hide" alt="">
     <div class="anthem-text">
-      <div class="kicker">LÜTFEN AYAĞA KALKINIZ</div>
-      <h1>İstiklal Marşı</h1>
-      <div id="stanza" class="stanza"></div>
-      <div class="poet">Mehmet Âkif Ersoy</div>
-      <div class="bar"><div id="anthemBar"></div></div>
-      <div class="bar-meta"><span id="anthemSource"></span><span id="anthemTime"></span></div>
+      <div id="anthemKicker" class="kicker"></div>
+      <h1 id="anthemTitle"></h1>
+      <div id="anthemSource" class="anthem-sub"></div>
+      <div id="anthemBarWrap">
+        <div class="bar"><div id="anthemBar"></div></div>
+        <div class="bar-meta"><span id="anthemState"></span><span id="anthemTime"></span></div>
+      </div>
     </div>
   </section>
 
   <!-- SAYGI DURUŞU -->
   <section id="scr-saygi" class="screen saygi">
-    <div class="portrait">
-      <img id="portraitImg" src="/sounds/ataturk.jpg" alt="Mustafa Kemal Atatürk" onerror="this.style.display='none'">
+    <div id="portrait" class="portrait">
+      <img id="portraitImg" alt="">
     </div>
     <div class="saygi-text">
       <div id="saygiKicker" class="kicker"></div>
-      <h1>Saygı Duruşu</h1>
-      <p id="saygiLine">Ulu Önder Mustafa Kemal Atatürk'ü ve aziz şehitlerimizi saygı, minnet ve özlemle anıyoruz.</p>
+      <h1 id="saygiTitle">Saygı Duruşu</h1>
+      <p id="saygiLine"></p>
       <div id="saygiSteps" class="steps"></div>
     </div>
   </section>

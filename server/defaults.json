@@ -189,7 +189,16 @@
         {
           "type": "anthem"
         }
-      ]
+      ],
+      "screen": {
+        "bg": "#121212",
+        "kicker": "",
+        "title": "Saygı Duruşu",
+        "message": "Ulu Önder Mustafa Kemal Atatürk'ü ve aziz şehitlerimizi saygı, minnet ve özlemle anıyoruz.",
+        "image": null,
+        "grayscale": false,
+        "showSteps": true
+      }
     },
     {
       "id": "cuma",
@@ -206,7 +215,16 @@
         {
           "type": "anthem"
         }
-      ]
+      ],
+      "screen": {
+        "bg": "#121212",
+        "kicker": "",
+        "title": "Saygı Duruşu",
+        "message": "Ulu Önder Mustafa Kemal Atatürk'ü ve aziz şehitlerimizi saygı, minnet ve özlemle anıyoruz.",
+        "image": null,
+        "grayscale": false,
+        "showSteps": true
+      }
     },
     {
       "id": "kasim",
@@ -230,7 +248,16 @@
         {
           "type": "anthem"
         }
-      ]
+      ],
+      "screen": {
+        "bg": "#121212",
+        "kicker": "",
+        "title": "Saygı Duruşu",
+        "message": "Ulu Önder Mustafa Kemal Atatürk'ü saygı, minnet ve özlemle anıyoruz.",
+        "image": null,
+        "grayscale": true,
+        "showSteps": true
+      }
     },
     {
       "id": "anma",
@@ -254,7 +281,16 @@
         {
           "type": "anthem"
         }
-      ]
+      ],
+      "screen": {
+        "bg": "#121212",
+        "kicker": "",
+        "title": "Saygı Duruşu",
+        "message": "Aziz şehitlerimizi saygı, minnet ve rahmetle anıyoruz.",
+        "image": null,
+        "grayscale": false,
+        "showSteps": true
+      }
     },
     {
       "id": "saygi",
@@ -271,7 +307,16 @@
         {
           "type": "anthem"
         }
-      ]
+      ],
+      "screen": {
+        "bg": "#121212",
+        "kicker": "",
+        "title": "Saygı Duruşu",
+        "message": "Ulu Önder Mustafa Kemal Atatürk'ü ve aziz şehitlerimizi saygı, minnet ve özlemle anıyoruz.",
+        "image": null,
+        "grayscale": false,
+        "showSteps": true
+      }
     }
   ],
   "board": {
@@ -305,6 +350,15 @@
       "breakColor": "#2E9E5B",
       "lunchColor": "#E07B1A",
       "warnColor": "#F2C230"
+    },
+    "anthemScreen": {
+      "bg": "#C8102E",
+      "kicker": "LÜTFEN AYAĞA KALKINIZ",
+      "title": "İstiklal Marşı",
+      "showCeremonyName": true,
+      "showFlag": true,
+      "image": null,
+      "showProgress": true
     }
   },
   "media": []

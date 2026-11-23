@@ -149,6 +149,10 @@ main { padding: 0 16px; }
 .status-grid .k { margin: 0; font-size: 12px; }
 .status-grid input[type="color"] { width: 56px; height: 44px; }
 
+details.fold > summary { cursor: pointer; font-weight: 700; font-size: 16px; min-height: 28px; list-style-position: inside; }
+.screen-edit { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 4px; }
+.screen-edit h3 { font-size: 15px; margin: 12px 0 0; }
+
 /* Medya listesi */
 .upload { border: 1.5px dashed var(--muted); border-radius: 14px; padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
 .upload.drag { background: var(--surface2); }

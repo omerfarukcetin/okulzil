@@ -23,9 +23,14 @@ function createStore(dataDir) {
     data.emergency = { ...defaults.emergency, ...(saved.emergency || {}) };
     data.display = { ...defaults.display, ...(saved.display || {}) };
     data.display.status = { ...defaults.display.status, ...((saved.display && saved.display.status) || {}) };
+    data.display.anthemScreen = { ...defaults.display.anthemScreen, ...((saved.display && saved.display.anthemScreen) || {}) };
     if (!Array.isArray(data.media)) data.media = [];
     // Eski kayıtlar: törende ses başlatma ayarı yoksa ekle
     for (const c of data.ceremonies || []) {
+      if (!c.screen) {
+        const def = defaults.ceremonies.find((x) => x.id === c.id) || defaults.ceremonies.find((x) => x.id === 'saygi');
+        c.screen = structuredClone(def.screen);
+      }
       if (!c.soundStart) {
         c.soundStart = c.id === 'kasim' ? 'auto' : 'command';
         c.soundDelay = 0;

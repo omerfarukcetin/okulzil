@@ -235,6 +235,7 @@
     config = await api('GET', '/config');
     fillBell();
     fillBoard();
+    fillAnthem();
     fillSettings();
     if (state) renderState();
   }
@@ -309,6 +310,52 @@
     if (r.ok) loadConfig();
   };
   $('breakMusic').onchange = () => api('PUT', '/settings', { breakMusic: $('breakMusic').checked });
+
+  // Tören ekranları için görsel yükleme (dosya adını döndürür)
+  async function uploadImage(file) {
+    const r = await fetch('/api/image/upload?name=' + encodeURIComponent(file.name), { method: 'POST', headers: { 'x-pin': pin, 'Content-Type': 'application/octet-stream' }, body: file }).then((x) => x.json()).catch(() => ({ ok: false, error: 'Bağlantı hatası' }));
+    if (!r.ok) { alert(r.error || 'Görsel yüklenemedi'); return null; }
+    return r.file;
+  }
+  function imgPreview(box, file, emptyText) {
+    box.innerHTML = '';
+    if (file) { const i = el('img'); i.alt = ''; i.src = '/media/' + encodeURIComponent(file); box.appendChild(i); }
+    else box.appendChild(el('span', '', emptyText));
+  }
+
+  // ---------- İstiklal Marşı ekranı ----------
+  const ANTHEM_DEFAULTS = { bg: '#C8102E', kicker: 'LÜTFEN AYAĞA KALKINIZ', title: 'İstiklal Marşı', showCeremonyName: true, showFlag: true, image: null, showProgress: true };
+  function fillAnthem() {
+    const a = { ...ANTHEM_DEFAULTS, ...(config.display.anthemScreen || {}) };
+    $('anKicker').value = a.kicker;
+    $('anTitle').value = a.title;
+    $('anBg').value = a.bg;
+    $('anName').checked = !!a.showCeremonyName;
+    $('anFlag').checked = !!a.showFlag;
+    $('anProgress').checked = !!a.showProgress;
+    imgPreview($('anImgPrev'), a.image, 'Görsel yok');
+    $('anImgDel').disabled = !a.image;
+  }
+  async function saveAnthem(patch) {
+    config.display.anthemScreen = { ...ANTHEM_DEFAULTS, ...(config.display.anthemScreen || {}), ...patch };
+    const r = await api('PUT', '/display', { anthemScreen: patch });
+    flash('anMsg', r.ok ? 'Kaydedildi' : r.error, !r.ok);
+    fillAnthem();
+  }
+  $('anKicker').onchange = () => saveAnthem({ kicker: $('anKicker').value });
+  $('anTitle').onchange = () => saveAnthem({ title: $('anTitle').value.trim() || 'İstiklal Marşı' });
+  $('anBg').onchange = () => saveAnthem({ bg: $('anBg').value });
+  $('anName').onchange = () => saveAnthem({ showCeremonyName: $('anName').checked });
+  $('anFlag').onchange = () => saveAnthem({ showFlag: $('anFlag').checked });
+  $('anProgress').onchange = () => saveAnthem({ showProgress: $('anProgress').checked });
+  $('anImgInput').onchange = async () => {
+    const f = $('anImgInput').files[0];
+    $('anImgInput').value = '';
+    if (!f) return;
+    const file = await uploadImage(f);
+    if (file) saveAnthem({ image: file });
+  };
+  $('anImgDel').onclick = () => saveAnthem({ image: null });
 
   // ---------- Törenler ----------
   const openEditors = new Set();
@@ -431,6 +478,38 @@
     sound.onchange = syncSound;
     syncSound();
 
+    // Saygı duruşu ekranı (siren / sessiz adımlarda görünür)
+    const SCREEN_DEFAULTS = { bg: '#121212', kicker: '', title: 'Saygı Duruşu', message: '', image: null, grayscale: false, showSteps: true };
+    draft.screen = { ...SCREEN_DEFAULTS, ...(draft.screen || {}) };
+    const scrBox = el('div', 'screen-edit');
+    function renderScreenEdit() {
+      scrBox.innerHTML = '';
+      const hasSaygi = draft.steps.some((s) => s.type !== 'anthem');
+      scrBox.classList.toggle('hidden', !hasSaygi);
+      if (!hasSaygi) return;
+      const S = draft.screen;
+      const h3 = el('h3', '', 'Saygı duruşu ekranı');
+      const mk = (labelText, input) => { const l = el('label', '', labelText); input.id = 'scr-' + c.id + '-' + Math.random().toString(36).slice(2, 7); l.htmlFor = input.id; return [l, input]; };
+      const title = el('input'); title.value = S.title; title.oninput = () => { S.title = title.value; };
+      const kicker = el('input'); kicker.value = S.kicker; kicker.placeholder = 'Boş bırakılırsa tarih ve saat yazar'; kicker.oninput = () => { S.kicker = kicker.value; };
+      const msg = el('textarea'); msg.rows = 3; msg.value = S.message; msg.oninput = () => { S.message = msg.value; };
+      const bg = el('input'); bg.type = 'color'; bg.value = S.bg; bg.oninput = () => { S.bg = bg.value; };
+      const gl = el('label', 'check'); const g = el('input'); g.type = 'checkbox'; g.checked = !!S.grayscale; g.onchange = () => { S.grayscale = g.checked; };
+      gl.append(g, document.createTextNode('Görseli siyah-beyaz göster'));
+      const sl = el('label', 'check'); const sh = el('input'); sh.type = 'checkbox'; sh.checked = S.showSteps !== false; sh.onchange = () => { S.showSteps = sh.checked; };
+      sl.append(sh, document.createTextNode('Adımları ve geri sayımı göster'));
+      const prev = el('div', 'logo-prev');
+      imgPreview(prev, S.image, 'Görsel yok');
+      const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.className = 'hidden'; fi.id = 'scrimg-' + c.id;
+      const pick = el('label', 'btn', 'Görsel seç'); pick.htmlFor = fi.id; pick.style.cssText = 'display:inline-flex;align-items:center;margin:0';
+      const rm = el('button', 'btn', 'Kaldır'); rm.disabled = !S.image;
+      fi.onchange = async () => { const f = fi.files[0]; fi.value = ''; if (!f) return; const file = await uploadImage(f); if (file) { S.image = file; renderScreenEdit(); } };
+      rm.onclick = () => { S.image = null; renderScreenEdit(); };
+      const imgRow = el('div', 'logo-row'); const btns = el('div', 'row'); btns.style.margin = '0'; btns.append(pick, rm); imgRow.append(prev, btns, fi);
+      const colorRow = el('div', 'row'); const cl = el('label', 'grow', 'Arka plan rengi'); bg.id = 'scrbg-' + c.id; cl.htmlFor = bg.id; cl.style.margin = '0'; colorRow.append(cl, bg);
+      scrBox.append(h3, ...mk('Başlık', title), ...mk('Üst yazı', kicker), ...mk('Mesaj', msg), el('div', 'k', 'Görsel (örn. Atatürk fotoğrafı)'), imgRow, gl, sl, colorRow);
+    }
+
     const stepsBox = el('div');
     function renderSteps() {
       stepsBox.innerHTML = '';
@@ -457,6 +536,8 @@
         }
       });
     }
+    const _renderSteps = renderSteps;
+    renderSteps = () => { _renderSteps(); renderScreenEdit(); };
     renderSteps();
     const addStep = el('button', 'btn grow', '+ Adım ekle');
     addStep.onclick = () => { draft.steps.push({ type: 'silence', seconds: 60 }); renderSteps(); };
@@ -476,7 +557,7 @@
         rule.onlySchoolDays = school.checked;
       }
       if (!draft.steps.length) { msg.textContent = 'En az bir adım ekleyin'; msg.classList.add('bad'); return; }
-      const res = await api('PUT', '/ceremonies/' + c.id, { name: name.value.trim() || c.name, rule, steps: draft.steps, soundStart: sound.value, soundDelay: Number(delay.value) || 0, mode: !rule && c.mode === 'auto' ? 'manual' : c.mode });
+      const res = await api('PUT', '/ceremonies/' + c.id, { name: name.value.trim() || c.name, rule, steps: draft.steps, screen: draft.screen, soundStart: sound.value, soundDelay: Number(delay.value) || 0, mode: !rule && c.mode === 'auto' ? 'manual' : c.mode });
       if (res.ok) { openEditors.delete(c.id); await loadConfig(); }
       else { msg.textContent = res.error; msg.classList.add('bad'); }
     };
@@ -491,7 +572,7 @@
     const l3 = el('label', '', 'Adımlar (süre saniye)');
     const r1 = el('div', 'row'); r1.append(addStep);
     const r2 = el('div', 'row'); r2.append(save, del);
-    box.append(l1, name, l2, type, ruleBox, l4, sound, delayWrap, l3, stepsBox, r1, r2, msg);
+    box.append(l1, name, l2, type, ruleBox, l4, sound, delayWrap, l3, stepsBox, r1, scrBox, r2, msg);
     return box;
   }
   $('addCer').onclick = async () => {

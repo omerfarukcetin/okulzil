@@ -40,7 +40,6 @@ Testler: `npm test`
 | `anons.mp3` | Anons öncesi "ding-dong" |
 | `deprem.mp3`, `yangin.mp3`, `tahliye.mp3`, `sinifta-kal.mp3` | Acil durum sesleri |
 | `muzik/*.mp3` | Teneffüs müzikleri (rastgele çalar) |
-| `ataturk.jpg` | Saygı duruşu ekranındaki görsel |
 
 Dosya yoksa program yedek olarak kendi ürettiği zil ve siren seslerini çalar; yine de gerçek dosyaları koymanız önerilir.
 İstiklal Marşı dosyası yoksa tören ekranı gösterilir ama marş çalmaz.
@@ -69,6 +68,14 @@ Tören ayarlarında "Ses ne zaman başlasın" seçeneği:
 
 Birden fazla adımlı törenlerde (örn. saygı duruşu → İstiklal Marşı) her adım için "öncesinde komut bekle" seçilebilir.
 Ekran açık kalıp 3 saat içinde komut gelmezse kendiliğinden kapanır.
+
+### Tören ekranlarını özelleştirme
+
+Panelde **Törenler** sekmesinde:
+- **İstiklal Marşı ekranı:** üst yazı, başlık, arka plan rengi, tören adı, ay yıldız ya da yüklenen bir görsel (bayrak fotoğrafı, amblem), ilerleme çubuğu.
+- **Saygı duruşu ekranı** (her tören için ayrı, "Düzenle" içinde): başlık, üst yazı (boşsa tarih/saat), mesaj, görsel (örn. Atatürk fotoğrafı), siyah-beyaz görünüm, adımların gösterilmesi, arka plan rengi.
+
+Önizleme için töreni **Ekranı aç** ile açın; ses komut gelene kadar çalmaz.
 
 ## TV görünümü ve medya
 

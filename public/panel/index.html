@@ -130,6 +130,29 @@
     <!-- TÖRENLER -->
     <section id="tab-cer" class="tab">
       <p class="hint">Tören iki adımlıdır: önce <b>ekran açılır</b>, öğretmen işaret verince <b>"Başlat"</b> ile ses çalar. Otomatik törenlerde ekran belirlenen saatte kendisi açılır. Sistem odasındaki bilgisayarda Enter tuşu da başlatır.</p>
+      <details class="card fold" id="anthemCard">
+        <summary>İstiklal Marşı ekranı</summary>
+        <p class="hint" style="margin:8px 0">Bütün törenlerde marş çalarken TV'de görünen ekran. Önizlemek için bir töreni "Ekranı aç" ile açın; ses komut gelene kadar çalmaz.</p>
+        <div class="row">
+          <div class="grow"><label for="anKicker">Üst yazı</label><input id="anKicker" placeholder="LÜTFEN AYAĞA KALKINIZ"></div>
+          <div><label for="anBg">Arka plan</label><input id="anBg" type="color"></div>
+        </div>
+        <label for="anTitle">Başlık</label>
+        <input id="anTitle" placeholder="İstiklal Marşı">
+        <label class="check"><input id="anName" type="checkbox"> Başlığın altında tören adını göster</label>
+        <label class="check"><input id="anFlag" type="checkbox"> Ay yıldız göster</label>
+        <label class="check"><input id="anProgress" type="checkbox"> Marşın ilerleme çubuğunu göster</label>
+        <div class="k">Ay yıldız yerine görsel (bayrak fotoğrafı, okul amblemi…)</div>
+        <div class="logo-row">
+          <div class="logo-prev" id="anImgPrev"><span>Görsel yok</span></div>
+          <div class="row" style="margin:0">
+            <label for="anImgInput" class="btn" style="display:inline-flex;align-items:center;margin:0">Görsel seç</label>
+            <button id="anImgDel" class="btn">Kaldır</button>
+          </div>
+          <input id="anImgInput" type="file" accept="image/*" class="hidden">
+        </div>
+        <p id="anMsg" class="msg"></p>
+      </details>
       <div id="cerList"></div>
       <button id="addCer" class="btn dashed">+ Yeni tören ekle</button>
     </section>

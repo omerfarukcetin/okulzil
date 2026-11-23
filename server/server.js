@@ -105,7 +105,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     const firstWait = soundStart === 'command' || !!autoGoAt;
     const steps = c.steps.map((s, i) => ({ ...s, wait: i === 0 ? firstWait : !!s.wait }));
     state.mode = 'ceremony';
-    state.ceremony = { id: c.id, name: c.name, steps, startedAt: Date.now(), source, step: 0, waiting: firstWait, autoGoAt };
+    state.ceremony = { id: c.id, name: c.name, steps, screen: c.screen || null, startedAt: Date.now(), source, step: 0, waiting: firstWait, autoGoAt };
     clearTimeout(goTimer);
     if (autoGoAt) goTimer = setTimeout(() => ceremonyGo('otomatik'), autoGoAt - Date.now());
     armCeremonyTimer();
@@ -384,6 +384,11 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       if (req.body.rule !== undefined) t.rule = req.body.rule;
       if (Array.isArray(req.body.steps)) t.steps = req.body.steps;
       if (['command', 'auto'].includes(req.body.soundStart)) t.soundStart = req.body.soundStart;
+      if (req.body.screen && typeof req.body.screen === 'object') {
+        const before = t.screen && t.screen.image;
+        t.screen = cleanScreen(req.body.screen, t.screen);
+        if (before && before !== t.screen.image) setImmediate(() => cleanupImage(before));
+      }
       if (req.body.soundDelay != null) t.soundDelay = Math.max(0, Math.min(120, Number(req.body.soundDelay) || 0));
     });
     if (!found) return res.status(404).json({ ok: false, error: 'Tören bulunamadı' });
@@ -394,15 +399,18 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   api.post('/ceremonies', (req, res) => {
     const id = 't' + Date.now().toString(36);
     store.update((c) => {
-      c.ceremonies.push({ id, name: req.body.name || 'Yeni tören', mode: 'manual', soundStart: 'command', soundDelay: 0, rule: null, steps: [{ type: 'anthem' }] });
+      const def = require('./defaults.json').ceremonies.find((x) => x.id === 'saygi');
+      c.ceremonies.push({ id, name: req.body.name || 'Yeni tören', mode: 'manual', soundStart: 'command', soundDelay: 0, rule: null, steps: [{ type: 'anthem' }], screen: structuredClone(def.screen) });
     });
     res.json({ ok: true, id });
   });
 
   api.delete('/ceremonies/:id', (req, res) => {
+    const gone = cfg().ceremonies.find((x) => x.id === req.params.id);
     store.update((c) => {
       c.ceremonies = c.ceremonies.filter((x) => x.id !== req.params.id);
     });
+    if (gone && gone.screen) cleanupImage(gone.screen.image);
     res.json({ ok: true });
   });
 
@@ -465,6 +473,11 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       for (const k of ['showDuty', 'showMenu', 'mediaOnlyBreaks']) if (typeof b[k] === 'boolean') d[k] = b[k];
       if (['normal', 'big'].includes(b.logoSize)) d.logoSize = b.logoSize;
       if (typeof b.logoBg === 'boolean') d.logoBg = b.logoBg;
+      if (b.anthemScreen && typeof b.anthemScreen === 'object') {
+        const before = d.anthemScreen && d.anthemScreen.image;
+        d.anthemScreen = cleanScreen(b.anthemScreen, d.anthemScreen);
+        if (before && before !== d.anthemScreen.image) setImmediate(() => cleanupImage(before));
+      }
       if (b.status && typeof b.status === 'object') {
         const st = { ...(d.status || {}) };
         for (const k of ['enabled', 'bigCountdown']) if (typeof b.status[k] === 'boolean') st[k] = b.status[k];
@@ -477,6 +490,39 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     pushState();
     res.json({ ok: true });
   });
+
+  // --- Ekran görselleri (tören ekranları için) ---
+  const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'];
+  api.post('/image/upload', (req, res) => {
+    const ext = path.extname(String(req.query.name || '')).slice(1).toLowerCase();
+    if (!IMG_EXT.includes(ext)) return res.status(400).json({ ok: false, error: 'Görsel PNG, JPG, WEBP, SVG ya da GIF olmalı' });
+    const file = 'img-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) + '.' + ext;
+    const dest = path.join(mediaDir, file);
+    const out = fs.createWriteStream(dest);
+    let size = 0;
+    req.on('data', (ch) => { size += ch.length; if (size > 20 * 1024 * 1024) { req.destroy(); out.destroy(); fs.unlink(dest, () => {}); } });
+    req.pipe(out);
+    out.on('finish', () => {
+      if (!size || size > 20 * 1024 * 1024) { fs.unlink(dest, () => {}); return res.status(400).json({ ok: false, error: size ? 'Görsel 20 MB\'dan küçük olmalı' : 'Dosya boş' }); }
+      res.json({ ok: true, file });
+    });
+    out.on('error', () => res.status(500).json({ ok: false, error: 'Görsel kaydedilemedi' }));
+  });
+  // Artık hiçbir yerde kullanılmayan tören görselini sil
+  function cleanupImage(file) {
+    if (!file || !/^img-[\w]+\.\w+$/.test(file)) return;
+    const c = cfg();
+    const used = (c.display.anthemScreen && c.display.anthemScreen.image === file) || c.ceremonies.some((x) => x.screen && x.screen.image === file);
+    if (!used) fs.unlink(path.join(mediaDir, file), () => {});
+  }
+  function cleanScreen(input, base) {
+    const out = { ...(base || {}) };
+    for (const k of ['title', 'kicker', 'message']) if (typeof input[k] === 'string') out[k] = input[k].trim().slice(0, k === 'message' ? 300 : 80);
+    for (const k of ['grayscale', 'showSteps', 'showFlag', 'showProgress', 'showCeremonyName']) if (typeof input[k] === 'boolean') out[k] = input[k];
+    if (/^#[0-9a-fA-F]{6}$/.test(input.bg || '')) out.bg = input.bg;
+    if (input.image === null || (typeof input.image === 'string' && /^img-[\w]+\.\w+$/.test(input.image))) out.image = input.image;
+    return out;
+  }
 
   // --- Okul logosu ---
   api.post('/logo/upload', (req, res) => {
