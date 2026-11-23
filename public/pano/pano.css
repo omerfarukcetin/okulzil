@@ -1,5 +1,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+body.show-cursor, body.show-cursor * { cursor: default; }
+body.show-cursor .audio-gate { cursor: pointer; }
 body { font-family: "Segoe UI", Inter, system-ui, sans-serif; color: #F4F6FA; }
 
 /* 1280x720 sahne, ekrana göre ölçeklenir */
@@ -92,5 +94,5 @@ body { font-family: "Segoe UI", Inter, system-ui, sans-serif; color: #F4F6FA; }
 .overlay { position: absolute; left: 48px; right: 48px; bottom: 90px; background: #F4F6FA; color: #0E1A2B; border-radius: 20px; padding: 24px 32px; font-size: 30px; font-weight: 700; line-height: 1.35; display: none; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
 .overlay.show { display: block; }
 
-.audio-gate { position: fixed; right: 12px; bottom: 12px; background: #F2A93B; color: #0E1A2B; padding: 10px 14px; border-radius: 10px; font: 600 14px system-ui; display: none; cursor: pointer; }
+.audio-gate { position: fixed; right: 16px; bottom: 16px; background: #F2A93B; color: #0E1A2B; padding: 14px 18px; border-radius: 12px; font: 700 18px system-ui; display: none; }
 .audio-gate.show { display: block; }

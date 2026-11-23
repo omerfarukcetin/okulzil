@@ -30,8 +30,19 @@
   function checkGate() {
     $('audioGate').classList.toggle('show', AUDIO && AC.state === 'suspended');
   }
-  $('audioGate').addEventListener('click', () => AC.resume().then(checkGate));
+  // Sayfanın herhangi bir yerine tıklamak ya da bir tuşa basmak sesi açar
+  const unlock = () => AC.resume().then(checkGate);
+  document.addEventListener('click', unlock);
+  document.addEventListener('keydown', unlock);
   setTimeout(() => AC.resume().finally(checkGate), 300);
+
+  // Fare hareket edince imleç görünür, 3 sn durunca TV'de görünmesin diye gizlenir
+  let cursorTimer = null;
+  document.addEventListener('mousemove', () => {
+    document.body.classList.add('show-cursor');
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => document.body.classList.remove('show-cursor'), 3000);
+  });
 
   function stopAllAudio() {
     for (const a of [...active]) a.stop();
