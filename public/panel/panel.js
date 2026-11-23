@@ -554,10 +554,10 @@
     if (!r.ok) flash('mediaMsg', r.error || 'Kaydedilemedi', true);
   }
   document.querySelectorAll('#tvTheme .pill').forEach((b) => { b.onclick = () => saveDisplay({ theme: b.dataset.theme }); });
-  document.querySelectorAll('#tvLayout .layout-opt').forEach((b) => { b.onclick = () => saveDisplay({ layout: b.dataset.layout }); });
+  document.querySelectorAll('#tvLayout .layout-opt').forEach((b) => { b.onclick = () => { saveDisplay({ layout: b.dataset.layout }); renderMedia(); }; });
   $('tvDuty').onchange = () => saveDisplay({ showDuty: $('tvDuty').checked });
   $('tvMenu').onchange = () => saveDisplay({ showMenu: $('tvMenu').checked });
-  $('tvBreaks').onchange = () => saveDisplay({ mediaOnlyBreaks: $('tvBreaks').checked });
+  $('tvBreaks').onchange = () => { saveDisplay({ mediaOnlyBreaks: $('tvBreaks').checked }); renderMedia(); };
 
   // ---------- Medya ----------
   function renderMedia() {
@@ -565,6 +565,25 @@
     box.innerHTML = '';
     const list = config.media || [];
     if (!list.length) { box.appendChild(el('p', 'm-meta', 'Henüz medya eklenmedi.')); return; }
+    // Medya var ama TV'de neden görünmüyor? Kullanıcıya söyle.
+    const d = config.display || {};
+    let why = null;
+    if (!list.some((m) => m.enabled !== false)) why = 'Hiçbir medya "Yayında" değil, TV\'de görünmez.';
+    else if (d.layout === 'classic') why = 'TV şu an Klasik düzende; medya sadece "Medya + bilgi" ya da "Tam ekran medya" düzeninde görünür.';
+    if (why) {
+      const w = el('div', 'warn');
+      w.style.margin = '0 0 12px';
+      w.append(document.createTextNode(why + ' '));
+      if (d.layout === 'classic') {
+        const b = el('button', 'btn small', 'Medya + bilgi düzenine geç');
+        b.style.marginTop = '8px';
+        b.onclick = () => { saveDisplay({ layout: 'media' }); renderMedia(); };
+        w.append(el('br'), b);
+      }
+      box.appendChild(w);
+    } else if (d.mediaOnlyBreaks) {
+      box.appendChild(el('p', 'm-meta', 'Not: "Sadece teneffüste göster" açık; ders sırasında TV Klasik düzende kalır.'));
+    }
     list.forEach((m, i) => {
       const row = el('div', 'media-item' + (m.enabled === false ? ' off' : ''));
       let thumb;
