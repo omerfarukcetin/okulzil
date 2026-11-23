@@ -121,6 +121,10 @@
 
   function renderHeader() {
     $('hSchool').textContent = state.schoolName;
+    const lg = state.display && state.display.logo;
+    const hl = $('hLogo');
+    if (lg) { const src = '/media/' + encodeURIComponent(lg); if (hl.getAttribute('src') !== src) hl.src = src; }
+    hl.classList.toggle('hidden', !lg);
     const a = state.audio || { panos: 0, ready: 0 };
     const audioMsg = a.ready ? 'Ses çıkışı hazır' : a.panos ? 'Ses kapalı: panoya tıklayın' : 'Pano açık değil, ses çıkmaz';
     $('hConn').textContent = audioMsg;
@@ -518,8 +522,41 @@
 
   // ---------- TV görünümü ----------
   const ACCENTS = ['#F2A93B', '#4FC3A1', '#6CA8FF', '#FF7A59', '#C084FC', '#E30A17', '#FFFFFF'];
+  function fillLogo() {
+    const d = config.display;
+    const prev = $('logoPrev');
+    prev.innerHTML = '';
+    prev.classList.toggle('bg', !!d.logoBg);
+    if (d.logo) { const i = el('img'); i.alt = 'Okul logosu'; i.src = '/media/' + encodeURIComponent(d.logo); prev.appendChild(i); }
+    else prev.appendChild(el('span', '', 'Logo yok'));
+    $('logoDel').disabled = !d.logo;
+    document.querySelectorAll('#logoSize .pill').forEach((b) => {
+      const on = (d.logoSize || 'normal') === b.dataset.size;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on);
+    });
+    $('logoBg').checked = !!d.logoBg;
+  }
+  $('logoInput').onchange = async () => {
+    const f = $('logoInput').files[0];
+    if (!f) return;
+    flash('logoMsg', 'Yükleniyor…');
+    const r = await fetch('/api/logo/upload?name=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'x-pin': pin, 'Content-Type': 'application/octet-stream' }, body: f }).then((x) => x.json()).catch(() => ({ ok: false, error: 'Bağlantı hatası' }));
+    $('logoInput').value = '';
+    flash('logoMsg', r.ok ? 'Logo TV\'lerde' : r.error, !r.ok);
+    if (r.ok) loadConfig();
+  };
+  $('logoDel').onclick = async () => {
+    if (!confirm('Logo kaldırılsın mı?')) return;
+    await api('DELETE', '/logo');
+    loadConfig();
+  };
+  document.querySelectorAll('#logoSize .pill').forEach((b) => { b.onclick = () => { saveDisplay({ logoSize: b.dataset.size }); fillLogo(); }; });
+  $('logoBg').onchange = () => { saveDisplay({ logoBg: $('logoBg').checked }); fillLogo(); };
+
   function fillDisplay() {
     const d = config.display;
+    fillLogo();
     document.querySelectorAll('#tvTheme .theme-opt').forEach((b) => {
       b.classList.toggle('on', b.dataset.theme === d.theme);
       b.setAttribute('aria-pressed', b.dataset.theme === d.theme);

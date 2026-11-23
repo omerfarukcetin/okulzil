@@ -23,7 +23,7 @@
 <div id="app" class="app hidden">
   <header class="head">
     <div class="head-row">
-      <div id="hSchool" class="h-title"></div>
+      <div class="row" style="margin:0;gap:12px"><img id="hLogo" class="h-logo hidden" alt=""><div id="hSchool" class="h-title"></div></div>
       <div class="h-right">
         <div id="hConn" class="h-conn">Bağlanıyor…</div>
         <button id="themeBtn" class="theme-btn" aria-label="Panel teması" title="Panel teması"></button>
@@ -138,6 +138,28 @@
     <section id="tab-board" class="tab">
      <div class="cols">
       <div class="col-a">
+      <h2>Okul logosu</h2>
+      <div class="card">
+        <div class="logo-row">
+          <div class="logo-prev" id="logoPrev"><span>Logo yok</span></div>
+          <div class="grow">
+            <div class="m-meta">PNG (şeffaf arka planlı) en iyisidir. SVG, JPG, WEBP de olur.</div>
+            <div class="row">
+              <label for="logoInput" class="btn primary" style="display:inline-flex;align-items:center;margin:0;color:var(--on-primary)">Logo yükle</label>
+              <button id="logoDel" class="btn">Kaldır</button>
+            </div>
+            <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" class="hidden">
+          </div>
+        </div>
+        <div class="k">Logo boyutu</div>
+        <div class="pills" id="logoSize">
+          <button class="pill" data-size="normal">Normal</button>
+          <button class="pill" data-size="big">Büyük</button>
+        </div>
+        <label class="check"><input id="logoBg" type="checkbox"> Logonun arkasına beyaz zemin koy (koyu temada görünmeyen logolar için)</label>
+        <p id="logoMsg" class="msg"></p>
+      </div>
+
       <h2>TV görünümü</h2>
       <div class="card">
         <div class="k">Tema</div>

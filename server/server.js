@@ -220,7 +220,11 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
   const pub = path.join(__dirname, '..', 'public');
   app.use('/pano', express.static(path.join(pub, 'pano')));
   app.use('/panel', express.static(path.join(pub, 'panel')));
-  app.use('/media', express.static(mediaDir, { maxAge: '1d' }));
+  app.use('/media', express.static(mediaDir, {
+    maxAge: '1d',
+    // Yüklenen SVG içindeki betikler çalışmasın
+    setHeaders: (res, p) => { if (p.endsWith('.svg')) res.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox"); }
+  }));
   app.use('/sounds', express.static(soundsDir));
   if (bundledSoundsDir) app.use('/sounds', express.static(bundledSoundsDir));
   app.get('/', (req, res) => res.redirect('/panel/'));
@@ -459,7 +463,38 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       if (['classic', 'media', 'fullmedia'].includes(b.layout)) d.layout = b.layout;
       if (typeof b.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(b.accent)) d.accent = b.accent;
       for (const k of ['showDuty', 'showMenu', 'mediaOnlyBreaks']) if (typeof b[k] === 'boolean') d[k] = b[k];
+      if (['normal', 'big'].includes(b.logoSize)) d.logoSize = b.logoSize;
+      if (typeof b.logoBg === 'boolean') d.logoBg = b.logoBg;
     });
+    pushState();
+    res.json({ ok: true });
+  });
+
+  // --- Okul logosu ---
+  api.post('/logo/upload', (req, res) => {
+    const ext = path.extname(String(req.query.name || '')).slice(1).toLowerCase();
+    if (!['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext)) return res.status(400).json({ ok: false, error: 'Logo PNG, JPG, WEBP, SVG ya da GIF olmalı' });
+    const file = 'logo-' + Date.now().toString(36) + '.' + ext;
+    const dest = path.join(mediaDir, file);
+    const out = fs.createWriteStream(dest);
+    let size = 0;
+    req.on('data', (ch) => { size += ch.length; if (size > 10 * 1024 * 1024) { req.destroy(); out.destroy(); fs.unlink(dest, () => {}); } });
+    req.pipe(out);
+    out.on('finish', () => {
+      if (!size || size > 10 * 1024 * 1024) { fs.unlink(dest, () => {}); return res.status(400).json({ ok: false, error: size ? 'Logo 10 MB\'dan küçük olmalı' : 'Dosya boş' }); }
+      const old = cfg().display.logo;
+      store.update((c) => { c.display.logo = file; });
+      if (old) fs.unlink(path.join(mediaDir, path.basename(old)), () => {});
+      log('Okul logosu güncellendi');
+      pushState();
+      res.json({ ok: true });
+    });
+    out.on('error', () => res.status(500).json({ ok: false, error: 'Logo kaydedilemedi' }));
+  });
+  api.delete('/logo', (req, res) => {
+    const old = cfg().display.logo;
+    store.update((c) => { c.display.logo = null; });
+    if (old) fs.unlink(path.join(mediaDir, path.basename(old)), () => {});
     pushState();
     res.json({ ok: true });
   });

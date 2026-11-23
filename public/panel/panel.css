@@ -139,6 +139,12 @@ main { padding: 0 16px; }
 .tprev i { border-radius: 3px; }
 .tprev i.a { grid-column: 1 / span 2; }
 
+.logo-row { display: flex; gap: 14px; align-items: center; }
+.logo-prev { width: 120px; height: 80px; border-radius: 12px; background: var(--head); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; color: #A3AFC2; font-size: 13px; }
+.logo-prev img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.logo-prev.bg img { background: #fff; padding: 6px; border-radius: 8px; }
+.h-logo { height: 36px; width: auto; max-width: 120px; object-fit: contain; }
+
 /* Medya listesi */
 .upload { border: 1.5px dashed var(--muted); border-radius: 14px; padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
 .upload.drag { background: var(--surface2); }

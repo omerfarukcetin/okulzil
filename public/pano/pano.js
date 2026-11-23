@@ -237,6 +237,18 @@
     const accent = /^#[0-9a-fA-F]{6}$/.test(d.accent || '') ? d.accent : '#F2A93B';
     document.body.style.setProperty('--accent', accent);
     document.body.style.setProperty('--on-accent', onAccent(accent));
+    // Okul logosu
+    const logoSrc = d.logo ? '/media/' + encodeURIComponent(d.logo) : '';
+    all('js-logo').forEach((img) => {
+      if (img.getAttribute('data-src') !== logoSrc) {
+        img.setAttribute('data-src', logoSrc);
+        if (logoSrc) img.src = logoSrc; else img.removeAttribute('src');
+      }
+      img.classList.toggle('hide', !logoSrc);
+      img.onerror = () => img.classList.add('hide');
+    });
+    document.body.classList.toggle('logo-big', d.logoSize === 'big');
+    document.body.classList.toggle('logo-bg', !!d.logoBg);
     all('js-duty-card').forEach((e) => e.classList.toggle('hide', d.showDuty === false));
     all('js-menu-card').forEach((e) => e.classList.toggle('hide', d.showMenu === false));
     all('js-extras').forEach((e) => e.classList.toggle('hide', d.showDuty === false && d.showMenu === false));

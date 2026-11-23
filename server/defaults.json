@@ -291,7 +291,10 @@
     "layout": "classic",
     "showDuty": true,
     "showMenu": true,
-    "mediaOnlyBreaks": false
+    "mediaOnlyBreaks": false,
+    "logo": null,
+    "logoSize": "normal",
+    "logoBg": false
   },
   "media": []
 }
