@@ -73,7 +73,7 @@ Ekran açık kalıp 3 saat içinde komut gelmezse kendiliğinden kapanır.
 ## TV görünümü ve medya
 
 Panelde **Ekran** sekmesinden:
-- **Tema:** Koyu ya da Açık. Vurgu rengi hazır renklerden ya da özel renk ile seçilir.
+- **Tema:** Gece, Gündüz, Okyanus, Orman, Bayrak, Kum, Yüksek kontrast. Vurgu rengi hazır renklerden ya da özel renk ile değiştirilebilir.
 - **Düzen:** Klasik (saat, zil, duyurular), Medya + bilgi (büyük video/afiş alanı + saat, zil, duyurular), Tam ekran medya (alt şeritte saat, duyuru, zil).
 - **Medya:** JPG, PNG, WEBP, GIF, MP4, WEBM yüklenir (dosya başına en fazla 2 GB). Sıra, resim süresi, video sesi ve yayında olup olmadığı ayarlanır.
 - "Medyayı sadece teneffüs ve ders dışında göster" seçilirse ders sırasında Klasik düzene geçer.

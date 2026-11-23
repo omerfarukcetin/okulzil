@@ -12,6 +12,12 @@ body { font-family: "Segoe UI", Inter, system-ui, sans-serif; color: #F4F6FA; }
 /* ---------- TEMA ---------- */
 body { --bg: #0E1A2B; --card: #15233A; --card2: #1B2A40; --text: #F4F6FA; --muted: #A9B4C6; --faint: #6F7D93; --ticker: #08111E; --ticker-text: #D6DCE6; --accent: #F2A93B; --on-accent: #0E1A2B; }
 body[data-theme="light"] { --bg: #EEF1F5; --card: #FFFFFF; --card2: #E2E7EE; --text: #0E1A2B; --muted: #4A5568; --faint: #7A8699; --ticker: #0E1A2B; --ticker-text: #F4F6FA; }
+body[data-theme="ocean"] { --bg: #0B2545; --card: #13315C; --card2: #1D4070; --text: #EEF4FA; --muted: #A9BCD6; --faint: #7F95B5; --ticker: #071A33; --ticker-text: #D9E4F2; }
+body[data-theme="forest"] { --bg: #0F2A22; --card: #163A2F; --card2: #1F4A3C; --text: #EEF6F2; --muted: #A8C4B8; --faint: #7E9C90; --ticker: #0A1E18; --ticker-text: #D5E8DF; }
+body[data-theme="flag"] { --bg: #8E0E1F; --card: #A8182C; --card2: #B8283B; --text: #FFFFFF; --muted: #FFD9DD; --faint: #F2AEB6; --ticker: #6E0A17; --ticker-text: #FFFFFF; }
+body[data-theme="sand"] { --bg: #F5EFE6; --card: #FFFDF8; --card2: #EADFCF; --text: #2B2118; --muted: #6B5B4B; --faint: #9A8A78; --ticker: #2B2118; --ticker-text: #F5EFE6; }
+body[data-theme="contrast"] { --bg: #000000; --card: #141414; --card2: #262626; --text: #FFFFFF; --muted: #E0E0E0; --faint: #BDBDBD; --ticker: #000000; --ticker-text: #FFFFFF; }
+body[data-theme="contrast"] .card, body[data-theme="contrast"] .chip, body[data-theme="contrast"] .strip { outline: 2px solid #FFFFFF; }
 #stage { background: var(--bg); }
 
 /* ---------- ORTAK BİLGİ ÖĞELERİ ---------- */
@@ -31,7 +37,8 @@ body[data-theme="light"] { --bg: #EEF1F5; --card: #FFFFFF; --card2: #E2E7EE; --t
 .count-sub { font-size: 18px; margin-top: 4px; }
 .count-value { font-size: 72px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .label { font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
-body[data-theme="light"] .label { filter: brightness(.75); }
+body[data-theme="light"] .label, body[data-theme="sand"] .label { filter: brightness(.75); }
+body[data-theme="flag"] .label { color: #FFFFFF; }
 .ann-main { font-size: 24px; line-height: 1.35; }
 .ann-next { font-size: 18px; line-height: 1.35; color: var(--muted); }
 .list div { font-size: 18px; line-height: 1.7; }

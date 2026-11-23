@@ -233,7 +233,7 @@
 
   function applyDisplay() {
     const d = state.display || {};
-    document.body.dataset.theme = d.theme === 'light' ? 'light' : 'dark';
+    document.body.dataset.theme = ['light', 'ocean', 'forest', 'flag', 'sand', 'contrast'].includes(d.theme) ? d.theme : 'dark';
     const accent = /^#[0-9a-fA-F]{6}$/.test(d.accent || '') ? d.accent : '#F2A93B';
     document.body.style.setProperty('--accent', accent);
     document.body.style.setProperty('--on-accent', onAccent(accent));

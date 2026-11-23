@@ -517,10 +517,10 @@
 
 
   // ---------- TV görünümü ----------
-  const ACCENTS = ['#F2A93B', '#4FC3A1', '#6CA8FF', '#FF7A59', '#C084FC', '#E30A17'];
+  const ACCENTS = ['#F2A93B', '#4FC3A1', '#6CA8FF', '#FF7A59', '#C084FC', '#E30A17', '#FFFFFF'];
   function fillDisplay() {
     const d = config.display;
-    document.querySelectorAll('#tvTheme .pill').forEach((b) => {
+    document.querySelectorAll('#tvTheme .theme-opt').forEach((b) => {
       b.classList.toggle('on', b.dataset.theme === d.theme);
       b.setAttribute('aria-pressed', b.dataset.theme === d.theme);
     });
@@ -553,7 +553,9 @@
     const r = await api('PUT', '/display', patch);
     if (!r.ok) flash('mediaMsg', r.error || 'Kaydedilemedi', true);
   }
-  document.querySelectorAll('#tvTheme .pill').forEach((b) => { b.onclick = () => saveDisplay({ theme: b.dataset.theme }); });
+  // Temanın kendi vurgu rengi de seçilir (sonradan değiştirilebilir)
+  const THEME_ACCENT = { dark: '#F2A93B', light: '#F2A93B', ocean: '#6CA8FF', forest: '#4FC3A1', flag: '#FFFFFF', sand: '#FF7A59', contrast: '#F2A93B' };
+  document.querySelectorAll('#tvTheme .theme-opt').forEach((b) => { b.onclick = () => saveDisplay({ theme: b.dataset.theme, accent: THEME_ACCENT[b.dataset.theme] }); });
   document.querySelectorAll('#tvLayout .layout-opt').forEach((b) => { b.onclick = () => { saveDisplay({ layout: b.dataset.layout }); renderMedia(); }; });
   $('tvDuty').onchange = () => saveDisplay({ showDuty: $('tvDuty').checked });
   $('tvMenu').onchange = () => saveDisplay({ showMenu: $('tvMenu').checked });

@@ -455,7 +455,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     const b = req.body;
     store.update((c) => {
       const d = c.display;
-      if (['dark', 'light'].includes(b.theme)) d.theme = b.theme;
+      if (['dark', 'light', 'ocean', 'forest', 'flag', 'sand', 'contrast'].includes(b.theme)) d.theme = b.theme;
       if (['classic', 'media', 'fullmedia'].includes(b.layout)) d.layout = b.layout;
       if (typeof b.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(b.accent)) d.accent = b.accent;
       for (const k of ['showDuty', 'showMenu', 'mediaOnlyBreaks']) if (typeof b[k] === 'boolean') d[k] = b[k];
