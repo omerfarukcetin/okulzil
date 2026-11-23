@@ -97,6 +97,7 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       board: c.board,
       emergency: c.emergency,
       display: c.display,
+      ceremonies: c.ceremonies.map((x) => ({ id: x.id, name: x.name, mode: x.mode, steps: x.steps, screen: x.screen })),
       media: c.media.filter((m) => m.enabled !== false),
       sounds: c.sounds,
       breakMusic: c.breakMusic,
@@ -493,9 +494,9 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
       if (['normal', 'big'].includes(b.logoSize)) d.logoSize = b.logoSize;
       if (typeof b.logoBg === 'boolean') d.logoBg = b.logoBg;
       if (b.anthemScreen && typeof b.anthemScreen === 'object') {
-        const before = d.anthemScreen && d.anthemScreen.image;
+        const before = { ...(d.anthemScreen || {}) };
         d.anthemScreen = cleanScreen(b.anthemScreen, d.anthemScreen);
-        if (before && before !== d.anthemScreen.image) setImmediate(() => cleanupImage(before));
+        for (const k of ['image', 'video']) if (before[k] && before[k] !== d.anthemScreen[k]) setImmediate(() => cleanupImage(before[k]));
       }
       if (b.status && typeof b.status === 'object') {
         const st = { ...(d.status || {}) };
@@ -510,28 +511,32 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     res.json({ ok: true });
   });
 
-  // --- Ekran görselleri (tören ekranları için) ---
+  // --- Tören ekranları için görsel ve video (bayrak videosu vb.) ---
   const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'];
+  const VID_EXT = ['mp4', 'webm', 'm4v'];
   api.post('/image/upload', (req, res) => {
     const ext = path.extname(String(req.query.name || '')).slice(1).toLowerCase();
-    if (!IMG_EXT.includes(ext)) return res.status(400).json({ ok: false, error: 'Görsel PNG, JPG, WEBP, SVG ya da GIF olmalı' });
+    const isVideo = VID_EXT.includes(ext);
+    if (!IMG_EXT.includes(ext) && !isVideo) return res.status(400).json({ ok: false, error: 'Görsel (PNG, JPG, WEBP, SVG, GIF) ya da video (MP4, WEBM) olmalı' });
+    const LIMIT = (isVideo ? 1024 : 20) * 1024 * 1024;
     const file = 'img-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) + '.' + ext;
     const dest = path.join(mediaDir, file);
     const out = fs.createWriteStream(dest);
     let size = 0;
-    req.on('data', (ch) => { size += ch.length; if (size > 20 * 1024 * 1024) { req.destroy(); out.destroy(); fs.unlink(dest, () => {}); } });
+    req.on('data', (ch) => { size += ch.length; if (size > LIMIT) { req.destroy(); out.destroy(); fs.unlink(dest, () => {}); } });
     req.pipe(out);
     out.on('finish', () => {
-      if (!size || size > 20 * 1024 * 1024) { fs.unlink(dest, () => {}); return res.status(400).json({ ok: false, error: size ? 'Görsel 20 MB\'dan küçük olmalı' : 'Dosya boş' }); }
-      res.json({ ok: true, file });
+      if (!size || size > LIMIT) { fs.unlink(dest, () => {}); return res.status(400).json({ ok: false, error: size ? 'Dosya çok büyük (görsel 20 MB, video 1 GB)' : 'Dosya boş' }); }
+      res.json({ ok: true, file, type: isVideo ? 'video' : 'image' });
     });
-    out.on('error', () => res.status(500).json({ ok: false, error: 'Görsel kaydedilemedi' }));
+    out.on('error', () => res.status(500).json({ ok: false, error: 'Dosya kaydedilemedi' }));
   });
   // Artık hiçbir yerde kullanılmayan tören görselini sil
   function cleanupImage(file) {
     if (!file || !/^img-[\w]+\.\w+$/.test(file)) return;
     const c = cfg();
-    const used = (c.display.anthemScreen && c.display.anthemScreen.image === file) || c.ceremonies.some((x) => x.screen && x.screen.image === file);
+    const a = c.display.anthemScreen || {};
+    const used = a.image === file || a.video === file || c.ceremonies.some((x) => x.screen && (x.screen.image === file || x.screen.video === file));
     if (!used) fs.unlink(path.join(mediaDir, file), () => {});
   }
   function cleanScreen(input, base) {
@@ -539,9 +544,81 @@ function startServer({ dataDir, port, bundledSoundsDir }) {
     for (const k of ['title', 'kicker', 'message']) if (typeof input[k] === 'string') out[k] = input[k].trim().slice(0, k === 'message' ? 300 : 80);
     for (const k of ['grayscale', 'showSteps', 'showFlag', 'showProgress', 'showCeremonyName']) if (typeof input[k] === 'boolean') out[k] = input[k];
     if (/^#[0-9a-fA-F]{6}$/.test(input.bg || '')) out.bg = input.bg;
-    if (input.image === null || (typeof input.image === 'string' && /^img-[\w]+\.\w+$/.test(input.image))) out.image = input.image;
+    for (const k of ['image', 'video']) if (input[k] === null || (typeof input[k] === 'string' && /^img-[\w]+\.\w+$/.test(input[k]))) out[k] = input[k];
+    if (['flag', 'image', 'video', 'none'].includes(input.visual)) out.visual = input.visual;
     return out;
   }
+
+  // --- Ses kütüphanesi (zil, İstiklal Marşı, siren, alarm, müzik) ---
+  const SOUND_EXT = ['mp3', 'wav', 'ogg', 'm4a', 'aac'];
+  const TR = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', Ç: 'c', Ğ: 'g', İ: 'i', Ö: 'o', Ş: 's', Ü: 'u' };
+  function safeName(name) {
+    const ext = path.extname(name).toLowerCase();
+    const base = path.basename(name, path.extname(name)).replace(/[çğıöşüÇĞİÖŞÜ]/g, (ch) => TR[ch]).toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'ses';
+    return base + ext;
+  }
+  function listSounds(sub) {
+    const seen = new Map();
+    const dirs = [[path.join(soundsDir, sub || ''), 'uploaded'], [bundledSoundsDir && path.join(bundledSoundsDir, sub || ''), 'bundled']];
+    for (const [dir, source] of dirs) {
+      if (!dir || !fs.existsSync(dir)) continue;
+      for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (!f.isFile() || !SOUND_EXT.includes(path.extname(f.name).slice(1).toLowerCase()) || seen.has(f.name)) continue;
+        seen.set(f.name, { name: f.name, size: fs.statSync(path.join(dir, f.name)).size, source });
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+  }
+  api.get('/sounds', (req, res) => res.json({ files: listSounds(''), music: listSounds('muzik'), roles: cfg().sounds }));
+  api.post('/sounds/upload', (req, res) => {
+    const original = String(req.query.name || '');
+    const ext = path.extname(original).slice(1).toLowerCase();
+    if (!SOUND_EXT.includes(ext)) return res.status(400).json({ ok: false, error: 'Ses dosyası MP3, WAV, OGG, M4A ya da AAC olmalı' });
+    const sub = req.query.folder === 'muzik' ? 'muzik' : '';
+    const dir = path.join(soundsDir, sub);
+    fs.mkdirSync(dir, { recursive: true });
+    let file = safeName(original);
+    let n = 2;
+    while (fs.existsSync(path.join(dir, file))) file = safeName(path.basename(original, path.extname(original)) + '-' + n++ + path.extname(original));
+    const dest = path.join(dir, file);
+    const out = fs.createWriteStream(dest);
+    let size = 0;
+    const LIMIT = 200 * 1024 * 1024;
+    req.on('data', (ch) => { size += ch.length; if (size > LIMIT) { req.destroy(); out.destroy(); fs.unlink(dest, () => {}); } });
+    req.pipe(out);
+    out.on('finish', () => {
+      if (!size || size > LIMIT) { fs.unlink(dest, () => {}); return res.status(400).json({ ok: false, error: size ? 'Ses dosyası 200 MB\'dan küçük olmalı' : 'Dosya boş' }); }
+      const role = String(req.query.role || '');
+      if (role && !sub && cfg().sounds[role] !== undefined) store.update((c) => { c.sounds[role] = file; });
+      log('Ses yüklendi: ' + (sub ? sub + '/' : '') + file + (role ? ' (' + role + ')' : ''));
+      pushState();
+      res.json({ ok: true, file });
+    });
+    out.on('error', () => res.status(500).json({ ok: false, error: 'Dosya kaydedilemedi' }));
+  });
+  api.delete('/sounds/:name', (req, res) => {
+    const sub = req.query.folder === 'muzik' ? 'muzik' : '';
+    const file = path.basename(req.params.name);
+    const p = path.join(soundsDir, sub, file);
+    if (!fs.existsSync(p)) return res.status(404).json({ ok: false, error: 'Sadece yüklenen dosyalar silinebilir' });
+    fs.unlinkSync(p);
+    log('Ses silindi: ' + (sub ? sub + '/' : '') + file);
+    res.json({ ok: true });
+  });
+  api.put('/sounds/roles', (req, res) => {
+    const b = req.body || {};
+    store.update((c) => {
+      for (const k of Object.keys(c.sounds)) if (typeof b[k] === 'string') c.sounds[k] = path.basename(b[k]);
+    });
+    pushState();
+    res.json({ ok: true });
+  });
+
+  // --- İlk kurulum ---
+  api.put('/setup', (req, res) => {
+    store.update((c) => { c.setupDone = !!req.body.done; });
+    res.json({ ok: true });
+  });
 
   // --- Okul logosu ---
   api.post('/logo/upload', (req, res) => {

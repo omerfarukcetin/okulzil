@@ -33,7 +33,23 @@ git pull
 ```
 sonra sunucuyu yeniden başlatın (`Ctrl+C`, `npm run server` ya da `npm start`). Açık olan TV panosu ve paneller yeni sürümü kendiliğinden algılayıp yenilenir (tören ya da alarm sürüyorsa bittikten sonra). Çalışan sürüm panelde **Ayarlar → Bağlantı** bölümünde yazar.
 
+## Kontrol paneli
+
+Telefon ve bilgisayarda aynı panel açılır (geniş ekranda yan menü, telefonda alt menü). Açık / koyu tema sağ üstteki düğmeyle değişir.
+
+- **Ana sayfa:** şu anki durum (ders / teneffüs ve kalan süre), sıradaki ziller, zil çal, zil atla, sesli anons, tören başlat, acil durum alarmları.
+- **Zil:** bugünkü program, programları düzenleme, **Hızlı oluştur** (ilk ders, ders süresi, teneffüs ve öğle arasından saatleri hesaplar), yeni program, teneffüs müziği, günün akışı.
+- **Törenler:** her tören tek kartta; "Ekranı aç / Başlat". Düzenle penceresinde zamanlama, sesin ne zaman başlayacağı, adımlar ve saygı duruşu ekranı.
+- **Duyurular:** duyurular, kayan yazı, nöbetçiler, menü (satır satır), medya yükleme.
+- **Ayarlar:** Genel (okul adı, toplanma alanı, PIN), Görünüm (canlı TV önizlemesiyle logo, tema, düzen, teneffüs görünümü, İstiklal Marşı ekranı — ay yıldız / görsel / bayrak videosu), Sesler, Takvim (ders günleri, tatiller, uzun tatiller), Sistem (adresler, TV'de ses testi, kurulum sihirbazı, kayıt).
+
+İlk açılışta **kurulum sihirbazı** okul adı, logo, ders saatleri, sesler, tema ve PIN'i adım adım sorar. Sonradan Ayarlar › Sistem'den yeniden açılabilir.
+
 ## Ses dosyaları
+
+Sesler panelden yüklenir: **Ayarlar › Sesler**. Her iş (giriş zili, öğretmen zili, çıkış zili, İstiklal Marşı, siren, anons sesi, alarmlar) için yüklenen seslerden biri seçilir; "Dinle" sesi telefonda çalar. Teneffüs müzikleri de aynı sayfadan yüklenir.
+
+Elle eklemek isterseniz dosyaları ayar klasöründeki `sounds/` klasörüne de koyabilirsiniz. Varsayılan dosya adları:
 
 `sounds/` klasörüne (ya da paneldeki **Ayarlar → Bağlantı** bölümünde yazan ses klasörüne) şu adlarla koyun:
 

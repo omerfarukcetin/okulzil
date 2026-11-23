@@ -3,302 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0E1A2B">
+<meta name="theme-color" content="#0F172A">
 <title>Okul Zil Paneli</title>
 <link rel="stylesheet" href="panel.css">
+<script>
+  // Tema, sayfa çizilmeden önce uygulanır (yanıp sönme olmasın)
+  try {
+    var t = localStorage.getItem('zilTheme') || 'auto';
+    var dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  } catch (e) {}
+</script>
 </head>
 <body>
+  <!-- Giriş -->
+  <section id="login" class="login hidden">
+    <form id="loginForm" class="login-card">
+      <div class="login-mark" aria-hidden="true"></div>
+      <h1>Okul Zil Paneli</h1>
+      <p class="muted">Devam etmek için PIN girin.</p>
+      <label for="pinInput" class="sr-only">PIN</label>
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" required>
+      <button class="btn primary block" type="submit">Giriş yap</button>
+      <p id="loginErr" class="err" role="alert"></p>
+    </form>
+  </section>
 
-<!-- GİRİŞ -->
-<section id="login" class="login">
-  <div class="login-box">
-    <h1>Okul Zil Paneli</h1>
-    <label for="pinInput">PIN</label>
-    <input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••">
-    <button id="loginBtn" class="btn primary">Giriş</button>
-    <p id="loginErr" class="err"></p>
+  <!-- Uygulama -->
+  <div id="app" class="app hidden">
+    <aside class="side">
+      <div class="brand">
+        <img id="brandLogo" class="brand-logo hidden" alt="">
+        <div>
+          <div id="brandName" class="brand-name"></div>
+          <div id="brandStatus" class="status-pill"><span class="dot"></span><span class="txt">Bağlanıyor…</span></div>
+        </div>
+      </div>
+      <nav id="nav" class="nav" aria-label="Bölümler"></nav>
+      <div class="side-foot">
+        <button id="themeBtn" class="icon-btn" type="button"></button>
+      </div>
+    </aside>
+
+    <header class="topbar">
+      <img id="topLogo" class="brand-logo sm hidden" alt="">
+      <div class="top-title">
+        <div id="topName" class="brand-name"></div>
+        <div id="topStatus" class="status-pill"><span class="dot"></span><span class="txt">Bağlanıyor…</span></div>
+      </div>
+      <button id="themeBtn2" class="icon-btn" type="button"></button>
+    </header>
+
+    <main class="main">
+      <div id="banner"></div>
+      <div id="page"></div>
+    </main>
+
+    <nav id="tabbar" class="tabbar" aria-label="Bölümler"></nav>
   </div>
-</section>
 
-<div id="app" class="app hidden">
-  <header class="head">
-    <div class="head-row">
-      <div class="row" style="margin:0;gap:12px"><img id="hLogo" class="h-logo hidden" alt=""><div id="hSchool" class="h-title"></div></div>
-      <div class="h-right">
-        <div id="hConn" class="h-conn">Bağlanıyor…</div>
-        <button id="themeBtn" class="theme-btn" aria-label="Panel teması" title="Panel teması"></button>
-      </div>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="k">Sonraki zil</div><div id="hNext" class="v big">—</div></div>
-      <div class="stat"><div class="k">Bugünkü program</div><div id="hProg" class="v">—</div></div>
-    </div>
-  </header>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <div id="layer"></div>
 
-  <div id="audioWarn" class="warn hidden" role="status"></div>
-
-  <div id="activeBanner" class="banner hidden">
-    <div class="grow"><div id="bTag" class="b-tag"></div><div id="bName" class="b-name"></div><div id="bSub" class="b-sub"></div></div>
-    <div class="b-actions">
-      <button id="bGo" class="btn go hidden">▶ Başlat</button>
-      <button id="bStop" class="btn light">Durdur</button>
-    </div>
-  </div>
-
-  <main>
-    <!-- ANA SAYFA -->
-    <section id="tab-home" class="tab active">
-     <div class="cols">
-      <div class="col-a">
-      <div class="sec-head"><h2>Acil durum</h2>
-        <button id="drillBtn" class="pill" aria-pressed="false">Tatbikat modu: Kapalı</button>
-      </div>
-      <div class="alarm-grid">
-        <button class="alarm-btn deprem" data-alarm="deprem"><span>Deprem</span><small>Çök–Kapan–Tutun</small></button>
-        <button class="alarm-btn yangin" data-alarm="yangin"><span>Yangın</span><small>Tahliye talimatı</small></button>
-        <button class="alarm-btn tahliye" data-alarm="tahliye"><span>Tahliye</span><small>Toplanma alanına</small></button>
-        <button class="alarm-btn kilit" data-alarm="kilit"><span>Sınıfta kal</span><small>Kapılar kapalı, bekle</small></button>
-      </div>
-      <div id="confirmBox" class="confirm hidden">
-        <div id="confirmTitle" class="c-title"></div>
-        <p>Siren tüm katlarda çalacak, TV'ler acil durum ekranına geçecek. Çalan zil ve müzik kesilir.</p>
-        <div class="two">
-          <button id="confirmNo" class="btn">Vazgeç</button>
-          <button id="confirmYes" class="btn danger">Evet, başlat</button>
-        </div>
-      </div>
-
-      <h2>Hızlı işlemler</h2>
-      <div class="two">
-        <button id="ringNow" class="tile">Zili şimdi çal</button>
-        <button id="skipNext" class="tile">Sonraki zili atla</button>
-      </div>
-      <div class="card">
-        <label for="annText">Sesli anons</label>
-        <textarea id="annText" rows="2" placeholder="Örn. 9-A sınıfı başkanı müdür yardımcısının odasına gelsin."></textarea>
-        <div class="row">
-          <select id="annRepeat" aria-label="Tekrar sayısı"><option value="1">1 kez</option><option value="2">2 kez</option><option value="3">3 kez</option></select>
-          <button id="annSend" class="btn primary grow">Anons yap</button>
-        </div>
-      </div>
-      </div>
-      <div class="col-b">
-      <h2>Bugünün akışı</h2>
-      <div id="todayList" class="list"></div>
-      </div>
-     </div>
-    </section>
-
-    <!-- ZİL -->
-    <section id="tab-bell" class="tab">
-     <div class="cols">
-      <div class="col-a">
-      <h2>Bugün hangi program?</h2>
-      <div id="todayProgs" class="pills"></div>
-      <h2>Programı düzenle</h2>
-      <div class="card">
-        <div class="row">
-          <select id="editProg" aria-label="Düzenlenecek program" class="grow"></select>
-          <button id="progDefault" class="btn">Varsayılan yap</button>
-        </div>
-        <div class="row">
-          <label for="progName" class="grow">Program adı</label>
-          <label for="progOffset">Öğretmen zili (dk önce)</label>
-        </div>
-        <div class="row">
-          <input id="progName" class="grow">
-          <input id="progOffset" type="number" min="0" max="10" class="narrow">
-        </div>
-        <label class="check"><input id="progSilent" type="checkbox"> Sessiz (zil çalmaz, sadece ekranda gösterilir)</label>
-        <div id="lessonRows"></div>
-        <div class="row">
-          <button id="addLesson" class="btn grow">+ Ders ekle</button>
-          <button id="saveProg" class="btn primary grow">Kaydet</button>
-        </div>
-        <p id="progMsg" class="msg"></p>
-      </div>
-      </div>
-      <div class="col-b">
-      <h2>Teneffüs</h2>
-      <div class="card">
-        <label class="check"><input id="breakMusic" type="checkbox"> Teneffüslerde müzik çal (sounds/muzik klasörü)</label>
-      </div>
-      </div>
-     </div>
-    </section>
-
-    <!-- TÖRENLER -->
-    <section id="tab-cer" class="tab">
-      <p class="hint">Tören iki adımlıdır: önce <b>ekran açılır</b>, öğretmen işaret verince <b>"Başlat"</b> ile ses çalar. Otomatik törenlerde ekran belirlenen saatte kendisi açılır. Sistem odasındaki bilgisayarda Enter tuşu da başlatır.</p>
-      <details class="card fold" id="anthemCard">
-        <summary>İstiklal Marşı ekranı</summary>
-        <p class="hint" style="margin:8px 0">Bütün törenlerde marş çalarken TV'de görünen ekran. Önizlemek için bir töreni "Ekranı aç" ile açın; ses komut gelene kadar çalmaz.</p>
-        <div class="row">
-          <div class="grow"><label for="anKicker">Üst yazı</label><input id="anKicker" placeholder="LÜTFEN AYAĞA KALKINIZ"></div>
-          <div><label for="anBg">Arka plan</label><input id="anBg" type="color"></div>
-        </div>
-        <label for="anTitle">Başlık</label>
-        <input id="anTitle" placeholder="İstiklal Marşı">
-        <label class="check"><input id="anName" type="checkbox"> Başlığın altında tören adını göster</label>
-        <label class="check"><input id="anFlag" type="checkbox"> Ay yıldız göster</label>
-        <label class="check"><input id="anProgress" type="checkbox"> Marşın ilerleme çubuğunu göster</label>
-        <div class="k">Ay yıldız yerine görsel (bayrak fotoğrafı, okul amblemi…)</div>
-        <div class="logo-row">
-          <div class="logo-prev" id="anImgPrev"><span>Görsel yok</span></div>
-          <div class="row" style="margin:0">
-            <label for="anImgInput" class="btn" style="display:inline-flex;align-items:center;margin:0">Görsel seç</label>
-            <button id="anImgDel" class="btn">Kaldır</button>
-          </div>
-          <input id="anImgInput" type="file" accept="image/*" class="hidden">
-        </div>
-        <p id="anMsg" class="msg"></p>
-      </details>
-      <div id="cerList"></div>
-      <button id="addCer" class="btn dashed">+ Yeni tören ekle</button>
-    </section>
-
-    <!-- EKRAN (TV) -->
-    <section id="tab-board" class="tab">
-     <div class="cols">
-      <div class="col-a">
-      <h2>Okul logosu</h2>
-      <div class="card">
-        <div class="logo-row">
-          <div class="logo-prev" id="logoPrev"><span>Logo yok</span></div>
-          <div class="grow">
-            <div class="m-meta">PNG (şeffaf arka planlı) en iyisidir. SVG, JPG, WEBP de olur.</div>
-            <div class="row">
-              <label for="logoInput" class="btn primary" style="display:inline-flex;align-items:center;margin:0;color:var(--on-primary)">Logo yükle</label>
-              <button id="logoDel" class="btn">Kaldır</button>
-            </div>
-            <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" class="hidden">
-          </div>
-        </div>
-        <div class="k">Logo boyutu</div>
-        <div class="pills" id="logoSize">
-          <button class="pill" data-size="normal">Normal</button>
-          <button class="pill" data-size="big">Büyük</button>
-        </div>
-        <label class="check"><input id="logoBg" type="checkbox"> Logonun arkasına beyaz zemin koy (koyu temada görünmeyen logolar için)</label>
-        <p id="logoMsg" class="msg"></p>
-      </div>
-
-      <h2>TV görünümü</h2>
-      <div class="card">
-        <div class="k">Tema</div>
-        <div class="themes" id="tvTheme">
-          <button class="theme-opt" data-theme="dark"><span class="tprev" style="background:#0E1A2B"><i style="background:#15233A"></i><i style="background:#15233A"></i><i class="a" style="background:#F2A93B"></i></span>Gece</button>
-          <button class="theme-opt" data-theme="light"><span class="tprev" style="background:#EEF1F5"><i style="background:#FFFFFF"></i><i style="background:#FFFFFF"></i><i class="a" style="background:#F2A93B"></i></span>Gündüz</button>
-          <button class="theme-opt" data-theme="ocean"><span class="tprev" style="background:#0B2545"><i style="background:#13315C"></i><i style="background:#13315C"></i><i class="a" style="background:#6CA8FF"></i></span>Okyanus</button>
-          <button class="theme-opt" data-theme="forest"><span class="tprev" style="background:#0F2A22"><i style="background:#163A2F"></i><i style="background:#163A2F"></i><i class="a" style="background:#4FC3A1"></i></span>Orman</button>
-          <button class="theme-opt" data-theme="flag"><span class="tprev" style="background:#8E0E1F"><i style="background:#A8182C"></i><i style="background:#A8182C"></i><i class="a" style="background:#FFFFFF"></i></span>Bayrak</button>
-          <button class="theme-opt" data-theme="sand"><span class="tprev" style="background:#F5EFE6"><i style="background:#FFFDF8"></i><i style="background:#FFFDF8"></i><i class="a" style="background:#FF7A59"></i></span>Kum</button>
-          <button class="theme-opt" data-theme="contrast"><span class="tprev" style="background:#000000"><i style="background:#141414"></i><i style="background:#141414"></i><i class="a" style="background:#F2A93B"></i></span>Yüksek kontrast</button>
-        </div>
-        <div class="k">Düzen</div>
-        <div class="layouts" id="tvLayout">
-          <button class="layout-opt" data-layout="classic"><span class="thumb"><i style="left:6%;top:12%;width:42%;height:34%"></i><i class="a" style="left:6%;top:52%;width:42%;height:20%"></i><i style="left:52%;top:12%;width:42%;height:30%"></i><i style="left:52%;top:48%;width:20%;height:24%"></i><i style="left:74%;top:48%;width:20%;height:24%"></i></span>Klasik</button>
-          <button class="layout-opt" data-layout="media"><span class="thumb"><i class="m" style="left:6%;top:12%;width:60%;height:60%"></i><i style="left:6%;top:78%;width:60%;height:10%"></i><i style="left:70%;top:12%;width:24%;height:22%"></i><i class="a" style="left:70%;top:38%;width:24%;height:14%"></i><i style="left:70%;top:56%;width:24%;height:32%"></i></span>Medya + bilgi</button>
-          <button class="layout-opt" data-layout="fullmedia"><span class="thumb"><i class="m" style="left:0;top:0;width:100%;height:100%"></i><i style="left:5%;top:78%;width:20%;height:14%"></i><i style="left:28%;top:78%;width:44%;height:14%"></i><i class="a" style="left:75%;top:78%;width:20%;height:14%"></i></span>Tam ekran medya</button>
-        </div>
-        <div class="k">Vurgu rengi</div>
-        <div class="swatches" id="tvAccent"></div>
-        <label class="check"><input id="tvDuty" type="checkbox"> Nöbetçileri göster</label>
-        <label class="check"><input id="tvMenu" type="checkbox"> Yemek menüsünü göster</label>
-        <label class="check"><input id="tvBreaks" type="checkbox"> Medyayı sadece teneffüs ve ders dışında göster</label>
-        <p class="hint" style="margin:8px 0 0">Medya eklenmediyse TV her zaman Klasik düzende görünür.</p>
-      </div>
-
-      <h2>Teneffüs görünümü</h2>
-      <div class="card">
-        <label class="check"><input id="stEnabled" type="checkbox"> Teneffüs ve öğle arasında ekranın rengi değişsin</label>
-        <label class="check"><input id="stBig" type="checkbox"> Teneffüste en büyük yazı "derse kalan süre" olsun</label>
-        <div class="status-grid">
-          <span class="k">Durum</span><span class="k">Ekrandaki yazı</span><span class="k">Renk</span>
-          <span>Teneffüs</span><input id="stBreakText" aria-label="Teneffüs yazısı"><input id="stBreakColor" type="color" aria-label="Teneffüs rengi">
-          <span>Öğle arası</span><input id="stLunchText" aria-label="Öğle arası yazısı"><input id="stLunchColor" type="color" aria-label="Öğle arası rengi">
-          <span>Uyarı</span><input id="stWarnText" aria-label="Uyarı yazısı"><input id="stWarnColor" type="color" aria-label="Uyarı rengi">
-        </div>
-        <div class="row">
-          <label for="stWarnMin" class="grow" style="margin:0">Uyarı, ders başlamadan kaç dakika önce çıksın (0 = kapalı)</label>
-          <input id="stWarnMin" type="number" min="0" max="10" class="narrow">
-        </div>
-        <button id="stReset" class="btn" style="margin-top:12px">Varsayılanlara dön</button>
-      </div>
-
-      <h2>Medya (video, resim, afiş)</h2>
-      <div class="card">
-        <div id="dropZone" class="upload">
-          Dosyaları buraya sürükleyin ya da seçin<br>JPG, PNG, WEBP, GIF, MP4, WEBM · Videolar her zaman sessiz oynar
-          <div><label for="fileInput" class="btn primary" style="display:inline-flex;align-items:center;margin:10px 0 0;color:var(--on-primary)">Dosya seç</label></div>
-          <input id="fileInput" type="file" multiple accept="image/*,video/mp4,video/webm" class="hidden">
-          <div id="upProgressWrap" class="hidden"><div id="upText" class="m-meta" style="margin-top:10px"></div><div class="progress"><div id="upBar"></div></div></div>
-        </div>
-        <div id="mediaList" style="margin-top:12px"></div>
-        <p id="mediaMsg" class="msg"></p>
-      </div>
-      </div>
-
-      <div class="col-b">
-      <h2>Duyurular ve bilgiler</h2>
-      <div class="card">
-        <label for="bAnn">Duyurular (her satır bir duyuru)</label>
-        <textarea id="bAnn" rows="4"></textarea>
-        <label for="bDuty">Nöbetçiler (her satır "Yer: Ad")</label>
-        <textarea id="bDuty" rows="4" placeholder="Zemin: Ayşe Öğretmen"></textarea>
-        <label for="bMenu">Günün menüsü (her satır bir yemek)</label>
-        <textarea id="bMenu" rows="4"></textarea>
-        <label for="bTicker">Kayan yazı</label>
-        <input id="bTicker">
-        <button id="saveBoard" class="btn primary">Panoya gönder</button>
-        <p id="boardMsg" class="msg"></p>
-      </div>
-      </div>
-     </div>
-    </section>
-
-    <!-- AYARLAR -->
-    <section id="tab-set" class="tab">
-     <div class="cols">
-      <div class="col-a">
-      <div class="card">
-        <label for="sSchool">Okul adı</label>
-        <input id="sSchool">
-        <label for="sArea">Toplanma alanı</label>
-        <input id="sArea">
-        <div class="k">Ders günleri</div>
-        <div id="sDays" class="pills"></div>
-        <label for="sHol">Tatiller (her satır "AA-GG Ad" her yıl, ya da "YYYY-AA-GG Ad")</label>
-        <textarea id="sHol" rows="5"></textarea>
-        <label for="sBreaks">Uzun tatiller (her satır "YYYY-AA-GG YYYY-AA-GG Ad")</label>
-        <textarea id="sBreaks" rows="3" placeholder="2027-01-18 2027-01-29 Yarıyıl tatili"></textarea>
-        <label for="sPin">Yeni PIN (4–8 rakam, boş bırakılırsa değişmez)</label>
-        <input id="sPin" inputmode="numeric">
-        <button id="saveSet" class="btn primary">Kaydet</button>
-        <p id="setMsg" class="msg"></p>
-      </div>
-      </div>
-      <div class="col-b">
-      <h2>Ses testi</h2>
-      <div class="pills" id="soundTests"></div>
-      <h2>Bağlantı</h2>
-      <div id="info" class="card small"></div>
-      <h2>Kayıt</h2>
-      <div id="logList" class="list small"></div>
-      <button id="logout" class="btn">Çıkış yap</button>
-      </div>
-     </div>
-    </section>
-  </main>
-
-  <nav class="nav">
-    <button data-tab="home" class="on">Ana sayfa</button>
-    <button data-tab="bell">Zil</button>
-    <button data-tab="cer">Törenler</button>
-    <button data-tab="board">Ekran</button>
-    <button data-tab="set">Ayarlar</button>
-  </nav>
-</div>
-<script src="panel.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/bell.js"></script>
+  <script src="js/ceremonies.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/wizard.js"></script>
+  <script src="js/start.js"></script>
 </body>
 </html>

@@ -3,7 +3,10 @@
   'use strict';
   const params = new URLSearchParams(location.search);
   // Ses varsayılan olarak açık. Sadece ek ekranlarda sessiz istenirse: ?audio=0
-  const AUDIO = params.get('audio') !== '0';
+  // Panel içindeki önizleme: ses yok, komutlara tepki yok, sadece görünüm
+  const PREVIEW = params.get('preview') === '1';
+  const DEMO = params.get('demo') || '';
+  const AUDIO = params.get('audio') !== '0' && !PREVIEW;
   const $ = (id) => document.getElementById(id);
   const pad = (n) => String(n).padStart(2, '0');
   const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -347,6 +350,12 @@
       all('js-count-card').forEach((c) => c.classList.toggle('idle', !!o.idle));
       updateLayout();
     };
+    if (DEMO === 'break' || DEMO === 'lunch' || DEMO === 'warn') {
+      const label = DEMO === 'lunch' ? 'Öğle arası' : 'Teneffüs';
+      const left = DEMO === 'warn' ? '2 dk' : DEMO === 'lunch' ? '35 dk' : '8 dk';
+      return set({ phase: DEMO, period: label, title: 'Derse kalan', sub: '3. ders 09:50 – 10:30', nextLabel: "3. ders 09:50'de", left });
+    }
+    if (DEMO === 'lesson') return set({ lesson: true, phase: 'none', period: '2. ders · 09:00 – 09:40', title: 'Teneffüse kalan', sub: 'Çıkış zili 09:40', left: '22 dk' });
     if (!day.schoolDay) return set({ period: day.reason || 'Bugün ders yok', title: 'Bugün ders yok', sub: day.reason || '', idle: true });
     if (!L.length) return set({ period: '', title: 'Ders programı boş', sub: '', idle: true });
     const secTo = (t) => Math.max(0, Math.round((toMin(t) - cur) * 60));
@@ -401,6 +410,7 @@
     const layout = currentLayout();
     const id = screen === 'normal' ? 'scr-' + layout : 'scr-' + screen;
     if (id !== shownId) {
+      if (shownId === 'scr-anthem') $('anthemVideo').pause();
       shownId = id;
       document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
     }
@@ -522,12 +532,22 @@
     $('anthemTitle').textContent = a.title;
     $('anthemSource').textContent = a.showCeremonyName ? c.name : '';
     $('anthemSource').classList.toggle('hide', !a.showCeremonyName);
+    const visual = a.visual || (a.image ? 'image' : a.showFlag === false ? 'none' : 'flag');
     const img = $('anthemImg');
-    const useImg = !!a.image;
+    const useImg = visual === 'image' && !!a.image;
     if (useImg && img.getAttribute('src') !== mediaUrl(a.image)) img.src = mediaUrl(a.image);
     img.classList.toggle('hide', !useImg);
-    $('anthemFlag').classList.toggle('hide', useImg || !a.showFlag);
-    scr.classList.toggle('noimage', !useImg && !a.showFlag);
+    const vid = $('anthemVideo');
+    const useVid = visual === 'video' && !!a.video;
+    if (useVid) {
+      if (vid.getAttribute('src') !== mediaUrl(a.video)) vid.src = mediaUrl(a.video);
+      vid.muted = true; vid.volume = 0;
+      vid.play().catch(() => {});
+    } else if (!vid.paused) vid.pause();
+    vid.classList.toggle('hide', !useVid);
+    $('anthemFlag').classList.toggle('hide', visual !== 'flag');
+    scr.classList.toggle('has-video', useVid);
+    scr.classList.toggle('noimage', !useImg && !useVid && visual !== 'flag');
     $('anthemBarWrap').classList.toggle('hide', !a.showProgress);
     $('anthemBar').style.width = '0';
     $('anthemTime').textContent = '';
@@ -727,7 +747,18 @@
   }
 
   // ---------- Komutlar ----------
+  function renderDemoScreen() {
+    if (!state || (DEMO !== 'anthem' && DEMO !== 'saygi')) return;
+    const type = DEMO === 'anthem' ? 'anthem' : 'siren';
+    const cer = state.demoCeremony || (state.ceremonies || []).find((c) => c.steps.some((s) => (type === 'anthem' ? s.type === 'anthem' : s.type !== 'anthem')));
+    const c = cer || { id: 'demo', name: type === 'anthem' ? 'Pazartesi bayrak töreni' : 'Saygı duruşu', steps: [{ type, seconds: 60 }], screen: {} };
+    const steps = c.steps && c.steps.length ? c.steps : [{ type, seconds: 60 }];
+    const i = Math.max(0, steps.findIndex((s) => (type === 'anthem' ? s.type === 'anthem' : s.type !== 'anthem')));
+    prepareStep(c, steps, i, false);
+  }
+
   function handle(c) {
+    if (PREVIEW) return;
     if (c.action === 'bell') {
       if (!state || state.mode !== 'normal') return;
       stopMusic();
@@ -771,6 +802,7 @@
       clockOffset = state.serverTime - Date.now();
       renderBoard();
       tickClock();
+      if (PREVIEW) { renderDemoScreen(); return; }
       // Bağlantı kopup geri gelirse kaçırılan alarmı/töreni sürdür
       if (state.mode === 'alarm' && runningAlarmAt !== state.alarm.startedAt) runAlarm(state.alarm);
       if (state.mode === 'ceremony' && runningCeremonyAt !== state.ceremony.startedAt) {

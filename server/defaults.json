@@ -358,8 +358,11 @@
       "showCeremonyName": true,
       "showFlag": true,
       "image": null,
-      "showProgress": true
+      "showProgress": true,
+      "visual": "flag",
+      "video": null
     }
   },
-  "media": []
+  "media": [],
+  "setupDone": false
 }

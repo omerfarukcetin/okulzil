@@ -122,6 +122,11 @@ body[data-theme="flag"] .label { color: #FFFFFF; }
 .bar-meta { display: flex; justify-content: space-between; font-size: 18px; opacity: .9; margin-top: 8px; }
 #scr-anthem.waiting .bar { opacity: .3; }
 #scr-anthem.noimage { justify-content: center; text-align: center; }
+/* Bayrak videosu: tam ekran arka plan, yazılar altta */
+.anthem-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#scr-anthem.has-video { align-items: flex-end; padding: 0; }
+#scr-anthem.has-video .anthem-text { position: relative; padding: 120px 80px 56px; color: #fff; background: linear-gradient(to top, rgba(0,0,0,.75), rgba(0,0,0,0)); }
+#scr-anthem.has-video .anthem-text h1 { font-size: 88px; }
 #scr-anthem.noimage .anthem-text { align-items: center; flex: 0 1 900px; }
 #scr-anthem.noimage #anthemBarWrap { width: 100%; }
 
